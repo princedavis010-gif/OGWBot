@@ -5,6 +5,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 global.latestQR = null;
 require('dotenv').config();
+const {
+    getMode: getCommandAccessMode,
+    hasChainedDotCommands,
+    isSelfOnly,
+    parseAccessChange,
+    resolveCommandName,
+    setCommandMode,
+    setMode: setCommandAccessMode
+} = require('./utils/commandAccess');
 const handleWelcomeOn = require('./commands/welcomeon');
 const handleWelcomeOff = require('./commands/welcomeoff');
 const handleBlock = require('./commands/block');
@@ -63,6 +72,16 @@ function getSenderNumber(jid) {
 
 function isPrivateForSender(jid) {
     return isPrivate && getSenderNumber(jid) !== OWNER_NUMBER;
+}
+
+async function isGroupAdmin(sock, groupJid, participantJids) {
+    if (!groupJid.endsWith('@g.us')) return false;
+
+    const metadata = await sock.groupMetadata(groupJid);
+    const participant = metadata.participants?.find((entry) =>
+        [entry.id, entry.jid, entry.lid, entry.phoneNumber].some((jid) => jid && participantJids.includes(jid))
+    );
+    return participant?.admin === 'admin' || participant?.admin === 'superadmin';
 }
 
 // 🧠 Conscious AI Helper Functions
@@ -295,6 +314,73 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
 		const contextInfo = getContextInfo();
 
+        const normalizedText = text.trim().toLowerCase();
+        if (normalizedText === '.admin' || normalizedText === '.group') {
+            if (senderNumber !== OWNER_NUMBER) {
+                await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access mode.' }, { quoted: m });
+                return;
+            }
+
+            const mode = normalizedText === '.admin' ? 'admin' : 'group';
+            setCommandAccessMode(mode);
+            const message = mode === 'admin'
+                ? '🔒 Admin mode enabled. Only group admins and the bot owner can use bot commands.'
+                : '🔓 Group mode enabled. Admin-only command access is off.';
+            await sock.sendMessage(sender, { text: message }, { quoted: m });
+            return;
+        }
+
+        if (/^\.(admin|group)(?:\s|$)/.test(normalizedText)) {
+            await sock.sendMessage(sender, { text: 'Use .admin or .group by itself, in a separate message.' }, { quoted: m });
+            return;
+        }
+
+        const accessChange = parseAccessChange(text);
+        if (accessChange) {
+            if (senderNumber !== OWNER_NUMBER) {
+                await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access.' }, { quoted: m });
+                return;
+            }
+
+            setCommandMode(accessChange.command, accessChange.mode);
+            const accessLabel = accessChange.mode === 'self' ? 'owner-only' : 'available to the group';
+            await sock.sendMessage(sender, {
+                text: `✅ .${accessChange.command} is now ${accessLabel}.`
+            }, { quoted: m });
+            return;
+        }
+
+        if (hasChainedDotCommands(text)) {
+            await sock.sendMessage(sender, {
+                text: 'Use one command per message. Only a command followed by .self or .public can be combined.'
+            }, { quoted: m });
+            return;
+        }
+
+        const commandName = resolveCommandName(text);
+        if (commandName) {
+            if (isSelfOnly(commandName) && senderNumber !== OWNER_NUMBER) {
+                await sock.sendMessage(sender, { text: '🔒 This command is reserved for the bot owner.' }, { quoted: m });
+                return;
+            }
+
+            if (getCommandAccessMode() === 'admin' && senderNumber !== OWNER_NUMBER) {
+                let senderIsAdmin = false;
+                try {
+                    senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
+                } catch (error) {
+                    console.error('Failed to check group admin status:', error);
+                }
+
+                if (!senderIsAdmin) {
+                    await sock.sendMessage(sender, {
+                        text: '🔒 Admin mode is enabled. Only group admins can use bot commands.'
+                    }, { quoted: m });
+                    return;
+                }
+            }
+        }
+
         // Print to terminal if logs are enabled
         if (showTerminalLogs) {
             console.log(`Received message: "${text}" from ${sender}`);
@@ -370,7 +456,6 @@ if (text.toLowerCase().startsWith('.scr')) {
     await handleScr.handle(sock, m, { from: sender, quoted: contextInfo?.quotedMessage });
     return;
 }
-
 
 		// 🔓 Unlock Command Handler
 if (text.toLowerCase().startsWith('.unlock')) {
@@ -623,6 +708,22 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
         const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('hey og');
 
         if (isAiTriggered) {
+            if (getCommandAccessMode() === 'admin' && senderNumber !== OWNER_NUMBER) {
+                let senderIsAdmin = false;
+                try {
+                    senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
+                } catch (error) {
+                    console.error('Failed to check group admin status for AI:', error);
+                }
+
+                if (!senderIsAdmin) {
+                    await sock.sendMessage(sender, {
+                        text: '🔒 Admin mode is enabled. Only group admins can use the bot.'
+                    }, { quoted: m });
+                    return;
+                }
+            }
+
             let prompt = text;
 
             if (text.toLowerCase().startsWith('hey og')) {
