@@ -156,10 +156,16 @@ async function connectToWhatsApp() {
     }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed. Reconnecting...', shouldReconnect);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            if (global.activeSock === sock) {
+                global.activeSock = null;
+            }
+            console.error(`Connection closed (status ${statusCode ?? 'unknown'}): ${lastDisconnect?.error?.message ?? 'unknown error'}`);
             if (shouldReconnect) {
                 connectToWhatsApp();
+            } else {
+                console.error('WhatsApp logged out. Remove the saved auth_info session and pair the bot again.');
             }
         } else if (connection === 'open') {
             console.log('🤖 Bot successfully connected to WhatsApp!');
@@ -172,7 +178,12 @@ async function connectToWhatsApp() {
 
 // Listen for group participant updates (Joins, leaves, etc.)
 sock.ev.on('group-participants.update', async (update) => {
-    await handleWelcome({ sock, update, sleep });
+    if (global.activeSock !== sock) return;
+    try {
+        await handleWelcome({ sock, update, sleep });
+    } catch (error) {
+        console.error('Welcome handler failed:', error);
+    }
 });
 
     sock.ev.on('creds.update', saveCreds);
