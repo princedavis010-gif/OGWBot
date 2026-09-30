@@ -1,8 +1,8 @@
 async function handleMenu({ sock, m, sender, sleep }) {
-    const menuText = `╭━━『 ♡ OG Core ♡ 』━━╮
+    const menuText = `╭━━『 ♡ 𝓞𝓖 𝓒𝓞𝓡𝓔 ♡ 』━━╮
 
 ⚡ Prefix: .
-📦 Total Commands: 36
+📦 Total Commands: 37
 👑 Owner: Prince Davis
 🤖 BOT: https://og-core.onrender.com
 
@@ -26,6 +26,8 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .demote
 │ ➜ .lock
 │ ➜ .unlock
+│ ➜ .block
+│ ➜ .unblock
 │ ➜ .mute
 │ ➜ .unmute
 │ ➜ .add
@@ -35,8 +37,8 @@ async function handleMenu({ sock, m, sender, sleep }) {
 ┏━━━━━━━━━━━━━━━━━
 ┃ 🤖 AI COMMAND
 ┗━━━━━━━━━━━━━━━━━
-│ ➜ .ai
 │ ➜ $img
+│ ➜ Hey OG ...
 │ ➜ gen
 
 ┏━━━━━━━━━━━━━━━━━
@@ -45,10 +47,10 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .song
 │ ➜ .music
 │ ➜ .s
+│ ➜ .scr
 │ ➜ .toimg
 │ ➜ .removebg
 │ ➜ .rbg
-│ ➜ .antiviewonce
 │ ➜ .st
 │ ➜ nice.
 
@@ -60,7 +62,6 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ t
 │ ➜ d
 │ ➜ .flirt
-│ ➜ .pickuplines
 
 ╰━━━━━━━━━━━━━━━━━
 
