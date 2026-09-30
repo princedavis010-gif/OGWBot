@@ -123,6 +123,13 @@ const activeTrivia = new Map(); // Tracks active trivia sessions per group JID
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
     
+    const sock = makeWASocket({
+        // ... your existing socket options ...
+    });
+
+    // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
+    global.activeSock = sock;
+
     // Your existing Baileys setup (useAuthState, makeWASocket, etc.)
     // ...
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
@@ -679,7 +686,7 @@ const sock = makeWASocket({
 global.activeSock = sock; // <-- Save reference so the web route can access it
 
 app.get('/', (req, res) => {
-    res.send("OGWBot is running smoothly 24/7! Go to /qr to scan your code.");
+    res.send("OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code.");
 });
 
 app.get('/qr', async (req, res) => {
@@ -700,6 +707,51 @@ app.get('/qr', async (req, res) => {
     }
 });
 
+// --- /pair ROUTE FOR PHONE NUMBER LINKING ---
+global.pairingCode = null;
+
+app.get('/pair', async (req, res) => {
+    const phoneNumber = req.query.phone;
+
+    if (!phoneNumber) {
+        return res.send(`
+            <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+                <h2>Generate WhatsApp Pairing Code</h2>
+                <form action="/pair" method="GET">
+                    <input type="text" name="phone" placeholder="e.g. 2348123456789" style="padding: 10px; font-size: 16px; width: 250px; border-radius: 5px; border: 1px solid #ccc;" required />
+                    <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer;">Get Code</button>
+                </form>
+                <p style="color: gray; margin-top: 15px;">Enter your phone number with country code (no + sign).</p>
+            </div>
+        `);
+    }
+
+    if (!global.activeSock) {
+        return res.send(`<h2>Bot socket is not initialized yet. Please wait a few seconds and refresh.</h2>`);
+    }
+
+    try {
+        const cleanedPhone = phoneNumber.replace(/[^0-9]/g, '');
+        const code = await global.activeSock.requestPairingCode(cleanedPhone);
+        
+        res.send(`
+            <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+                <h2>Your WhatsApp Pairing Code:</h2>
+                <div style="font-size: 48px; font-weight: bold; letter-spacing: 5px; background: #f0f0f0; display: inline-block; padding: 20px 30px; border-radius: 10px; color: #25D366; margin: 20px 0;">
+                    ${code?.match(/.{1,4}/g)?.join('-') || code}
+                </div>
+                <p>1. Open WhatsApp on your phone.</p>
+                <p>2. Go to <b>Linked Devices</b> > <b>Link a Device</b> > <b>Link with phone number instead</b>.</p>
+                <p>3. Type this code in!</p>
+            </div>
+        `);
+    } catch (err) {
+        console.error("Pairing code error:", err);
+        res.status(500).send(`<h2>Error generating pairing code: ${err.message}</h2>`);
+    }
+});
+
+// 3. Listen on port (Must be the absolute last thing in the file)
 app.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
 });
