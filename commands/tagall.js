@@ -13,7 +13,7 @@ async function handleTagAll(sock, m, text, sender, sleep) {
         const memberJids = participants.map(p => p.id);
 
         // Dynamically slice depending on which trigger was used
-        const trigger = text.toLowerCase().startsWith('.evy') ? '.evy' : '.tagll';
+        const trigger = text.toLowerCase().startsWith('.evy') ? '.evy' : '.tagall';
         const customMessage = text.slice(trigger.length).trim();
         
         let tagText = `*ALL MEMBERS*\n\n`;
