@@ -1,45 +1,71 @@
 async function handleMenu({ sock, m, sender, sleep }) {
-    const menuText = `🤖 *OG BOT MENU* 🤖
-*Hey there! I am OG, your street-smart WhatsApp companion.*
+    const menuText = `╭━━『 ♡ OG Core ♡ 』━━╮
 
-👑 *Owner & System Commands:*
-• \`.private\` - Switch bot to private mode
-• \`.public\` - Switch bot to public mode
-• \`.restart\` - Restart bot system
-• \`.kill\` - Force shutdown bot
-• \`.on\` / \`.off\` - Toggle terminal logs
-• \`.life\` / \`.death\` - Toggle quote AI settings
+⚡ Prefix: .
+📦 Total Commands: 36
+👑 Owner: Prince Davis
+🤖 BOT: https://og-core.onrender.com
 
-🛡️ *Group Management & Admin:*
-• \`.kick\` - Remove a member from the group
-• \`.promote\` - Make a member a group admin
-• \`.demote\` - Remove admin rights from a member
-• \`.lock\` / \`.unlock\` - Lock or unlock group settings
-• \`.mute\` / \`.unmute\` - Mute or unmute specific users
-• \`.add\` - Add a new member to the group
-• \`.tagall\` / \`.everyone\` - Tag all members in a group
+┏━━━━━━━━━━━━━━━━━
+┃ 👑 OWNER & SYSTEM
+┗━━━━━━━━━━━━━━━━━
+│ ➜ .private
+│ ➜ .public
+│ ➜ .restart
+│ ➜ .kill
+│ ➜ .on
+│ ➜ .off
+│ ➜ .life
+│ ➜ .death
 
-🎉 *Fun & Games:*
-• \`.trivia\` - Start an interactive quiz game
-• \`t\` - Play Truth
-• \`d\` - Play Dare
-• \`.flirt\` / \`.pickuplines\` - Get fun pick-up lines
-• \`.alive\` - Check if the bot is active & view ping
+┏━━━━━━━━━━━━━━━━━
+┃ 🛡️️ ADMIN & GROUP
+┗━━━━━━━━━━━━━━━━━
+│ ➜ .kick
+│ ➜ .promote
+│ ➜ .demote
+│ ➜ .lock
+│ ➜ .unlock
+│ ➜ .mute
+│ ➜ .unmute
+│ ➜ .add
+│ ➜ .tagall
+│ ➜ .everyone
 
-🎨 *Media & Tools:*
-• \`.song\` / \`.music\` [title] - Download music/mp3
-• \`.s\` - Convert media into a custom sticker
-• \`.toimg\` - Convert a sticker back to an image
-• \`.removebg\` / \`.rbg\` - Remove background from an image
-• \`$img\` / \`gen\` [prompt] - Generate AI images
-• \`nice.\` / \`.antiviewonce\` - Grab view-once media
-• \`.st\` - Media downloader tool
+┏━━━━━━━━━━━━━━━━━
+┃ 🤖 AI COMMAND
+┗━━━━━━━━━━━━━━━━━
+│ ➜ .ai
+│ ➜ $img
+│ ➜ gen
 
-💬 *AI Companion:*
-• Mention the bot or type *Hey OG [message]* to chat!
-• Reply directly to my messages to keep the conversation flowing naturally.
+┏━━━━━━━━━━━━━━━━━
+┃ 🎨 MEDIA & TOOLS
+┗━━━━━━━━━━━━━━━━━
+│ ➜ .song
+│ ➜ .music
+│ ➜ .s
+│ ➜ .toimg
+│ ➜ .removebg
+│ ➜ .rbg
+│ ➜ .antiviewonce
+│ ➜ .st
+│ ➜ nice.
 
-_Powered by Prince Davis_`;
+┏━━━━━━━━━━━━━━━━━
+┃ 🎭 FUN & GAMES
+┗━━━━━━━━━━━━━━━━━
+│ ➜ .alive
+│ ➜ .trivia
+│ ➜ t
+│ ➜ d
+│ ➜ .flirt
+│ ➜ .pickuplines
+
+╰━━━━━━━━━━━━━━━━━
+
+💡 Type .help  for more info
+🌟 Bot Version: 1.0.0`;
 
     await sleep(500);
     await sock.sendMessage(sender, { text: menuText }, { quoted: m });
