@@ -1,4 +1,4 @@
-const scrCommand = require('./commands/scr');
+const handleScr = require('./commands/scr');
 const express = require('express');
 const qrcode = require('qrcode');
 const app = express();
@@ -355,8 +355,8 @@ if (text.toLowerCase().startsWith('.lock')) {
     return;
 }
 
-if (command === 'scr') {
-    await scrCommand.execute(sock, m, { from, quoted });
+if (command === '.scr') {
+    await handleScr.handle(sock, m, { from, quoted });
 }
 
 		// 🔓 Unlock Command Handler

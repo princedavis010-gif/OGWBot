@@ -3,9 +3,9 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
 module.exports = {
     name: 'scr',
-    description: 'Crops an image to a 1:1 square aspect ratio and converts it into a WhatsApp sticker',
+    description: 'Crops an image to 1:1 square aspect ratio and converts it into a WhatsApp sticker',
     
-    async execute(sock, m, { from, quoted }) {
+    async handle(sock, m, { from, quoted }) {
         try {
             // Check if the message is an image or a reply to an image
             const targetMessage = m.message?.imageMessage || quoted?.imageMessage;
