@@ -673,9 +673,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
     });
 }
 
-connectToWhatsApp();
-
-global.activeSock = sock; // <-- Save reference so the web route can access it
+connectToWhatsApp(); // <-- Save reference so the web route can access it
 
 app.get('/', (req, res) => {
     res.send("OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code.");
