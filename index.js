@@ -853,7 +853,7 @@ app.get('/qr', async (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h2>OG CORE</h2>
+                <h2>OG CORE - QR Scan</h2>
                 <br>
                 <img src="${qrImageURL}" alt="QR Code" />
                 <br>
@@ -880,9 +880,412 @@ global.pairingCode = null;
 app.get('/pair', async (req, res) => {
     const phoneNumber = req.query.phone;
 
+    // 1. If phone number is not provided, show the form
     if (!phoneNumber) {
         return res.send(`
-            <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+                <title>OG CORE - Pairing Code</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        text-align: center;
+                        padding: 50px 20px;
+                        color: yellowgreen;
+                        background-attachment: fixed;
+                        background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                        margin: 0;
+                    }
+                    h2 {
+                        color: rgb(221, 187, 15);
+                        text-shadow: black 1px 1px;
+                        font-family: "Rubik Wet Paint", system-ui;
+                        font-weight: 1;
+                        font-size: 32px;
+                        margin-bottom: 20px;
+                    }
+                    p {
+                        color: rgb(19, 221, 150);
+                        margin-top: 15px;
+                        font-family: "Kavoon", system-ui;
+                        font-size: 14px;
+                    }
+                    .container {
+                        max-width: 400px;
+                        margin: 0 auto;
+                        padding: 30px;
+                        background: rgba(30, 27, 75, 0.4);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.1);
+                    }
+                    input[type="text"] {
+                        padding: 12px;
+                        font-size: 16px;
+                        width: 100%;
+                        border-radius: 8px;
+                        border: 1px solid #475569;
+                        background: #1e293b;
+                        color: #fff;
+                        box-sizing: border-box;
+                        outline: none;
+                        text-align: center;
+                        margin-bottom: 15px;
+                    }
+                    input[type="text"]:focus {
+                        border-color: rgb(221, 187, 15);
+                    }
+                    button[type="submit"] {
+                        padding: 12px 20px;
+                        font-size: 16px;
+                        background-color: #25D366;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        width: 100%;
+                        font-weight: bold;
+                        font-family: "Kavoon", system-ui;
+                    }
+                    button[type="submit"]:hover {
+                        background-color: #20ba5a;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>OG CORE</h2>
+                    <form action="/pair" method="GET">
+                        <input type="text" name="phone" placeholder="e.g. 2348123456789" required autocomplete="off" />
+                        <button type="submit">Get Code</button>
+                    </form>
+                    <p>Enter your phone number with country code (no + sign).</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    // 2. Check if active socket is ready
+    if (!global.activeSock) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+                <style>
+                    body { text-align: center; padding: 50px; background: #0f172a; color: yellowgreen; font-family: sans-serif; }
+                    h2 { color: rgb(221, 187, 15); font-family: "Rubik Wet Paint", system-ui; }
+                </style>
+            </head>
+            <body>
+                <div style="max-width: 400px; margin: 0 auto; padding: 30px; background: rgba(30, 27, 75, 0.4); border-radius: 12px;">
+                    <h2>OG CORE</h2>
+                    <p style="color: #ff4d4d; margin-top: 15px;">Bot socket is not initialized yet. Please wait a few seconds and refresh.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    // 3. Request pairing code and display result
+    try {
+        const cleanedPhone = phoneNumber.replace(/[^0-9]/g, '');
+        const code = await global.activeSock.requestPairingCode(cleanedPhone);
+        
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+                <title>OG CORE - Pairing Code</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        text-align: center;
+                        padding: 50px 20px;
+                        color: yellowgreen;
+                        background-attachment: fixed;
+                        background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                        margin: 0;
+                    }
+                    h2 {
+                        color: rgb(221, 187, 15);
+                        text-shadow: black 1px 1px;
+                        font-family: "Rubik Wet Paint", system-ui;
+                        font-size: 28px;
+                        margin-bottom: 15px;
+                    }
+                    p {
+                        color: rgb(19, 221, 150);
+                        font-size: 14px;
+                        margin: 10px 0;
+                        font-family: "Kavoon", system-ui;
+                        text-align: left;
+                    }
+                    .container {
+                        max-width: 420px;
+                        margin: 0 auto;
+                        padding: 30px;
+                        background: rgba(30, 27, 75, 0.4);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.1);
+                    }
+                    .code-display {
+                        font-size: 38px;
+                        font-weight: bold;
+                        letter-spacing: 4px;
+                        background: #0f172a;
+                        display: inline-block;
+                        padding: 15px 20px;
+                        border-radius: 10px;
+                        color: rgb(221, 187, 15);
+                        margin: 15px 0;
+                        border: 1px dashed rgb(19, 221, 150);
+                        font-family: monospace;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>OG CORE</h2>
+                    <h3 style="color: rgb(221, 187, 15); font-family: 'Kavoon'; margin-bottom: 5px;">Your Pairing Code:</h3>
+                    <div class="code-display">
+                        ${code?.match(/.{1,4}/g)?.join('-') || code}
+                    </div>
+                    <p>1. Open WhatsApp on your phone.</p>
+                    <p>2. Go to <b>Linked Devices</b> &gt; <b>Link a Device</b> &gt; <b>Link with phone number instead</b>.</p>
+                    <p>3. Type this code in!</p>
+                </div>
+            </body>
+            </html>
+        `);
+    } catch (err) {
+        console.error("Pairing code error:", err);
+        res.status(500).send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { text-align: center; padding: 50px; background: #0f172a; color: #ff4d4d; font-family: sans-serif; }
+                </style>
+            </head>
+            <body>
+                <div style="max-width: 400px; margin: 0 auto; padding: 30px; background: rgba(30, 27, 75, 0.4); border-radius: 12px;">
+                    <h2>Error generating pairing code:</h2>
+                    <p>${err.message}</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+});
+
+ /*app.get('/pair', async (req, res) => {
+    const phoneNumber = req.query.phone;
+
+    if (!phoneNumber) {
+        return res.send(`
+
+            <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+            <title>OG CORE - Pairing Code</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 50px 20px;
+                    color: yellowgreen;
+                    background-attachment: fixed;
+                    background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                    margin: 0;
+                }
+                h2 {
+                    color: rgb(221, 187, 15);
+                    text-shadow: black 1px 1px;
+                    font-family: "Rubik Wet Paint", system-ui;
+                    font-weight: 1;
+                    font-size: 38px;
+                }
+                a, button {
+                    font-family: "Kavoon", system-ui;
+                    font-weight: 0.5;
+                }
+                p {
+                    color: rgb(19, 221, 150);
+                }
+                .container {
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+                input[type="text"] {
+                    width: 100%;
+                    padding: 12px;
+                    margin: 15px 0;
+                    border-radius: 8px;
+                    border: 1px solid #475569;
+                    background: #1e293b;
+                    color: #fff;
+                    font-size: 16px;
+                    box-sizing: border-box;
+                    outline: none;
+                    text-align: center;
+                }
+                .btn {
+                    display: block;
+                    width: 100%;
+                    margin: 15px 0;
+                    padding: 12px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+                .btn-browser {
+                    background-color: #0088cc;
+                    color: white;
+                }
+                .btn-playstore {
+                    background-color: #24292e;
+                    color: white;
+                    font-size: 15px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>OG CORE</h2>
+                <p>Enter your WhatsApp phone number with country code (e.g. 2348123456789)</p>
+                <br>
+                <form action="/code" method="GET">
+                    <input type="text" name="phone" placeholder="2348123456789" required autocomplete="off">
+                    <button type="submit" class="btn btn-browser">Get Pairing Code</button>
+                </form>
+                <a href="/" class="btn btn-playstore">Back to Home</a>
+            </div>
+        </body>
+        </html>
+    `)
+};
+
+// Result page that generates and displays the code
+app.get('/code', async (req, res) => {
+    const phone = req.query.phone;
+    let codeResultHTML = '';
+
+    if (!phone) {
+        codeResultHTML = '<p style="color: #ff4d4d;">Phone number is missing!</p>';
+    } else {
+        try {
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            if (typeof sock !== 'undefined' && sock.requestPairingCode) {
+                let code = await sock.requestPairingCode(cleanPhone);
+                code = code?.match(/.{1,4}/g)?.join('-') || code;
+                codeResultHTML = `
+                    <p>Your Pairing Code:</p>
+                    <div style="background: #0f172a; padding: 15px; border-radius: 8px; font-size: 24px; font-family: monospace; color: rgb(221, 187, 15); font-weight: bold; letter-spacing: 2px; margin: 15px 0; border: 1px dashed rgb(19, 221, 150);">
+                        ${code}
+                    </div>
+                `;
+            } else {
+                codeResultHTML = '<p style="color: #ff4d4d;">Bot socket is not ready yet. Try again shortly.</p>';
+            }
+        } catch (err) {
+            codeResultHTML = `<p style="color: #ff4d4d;">Error: ${err.message}</p>`;
+        }
+    }
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+            <title>OG CORE - Your Code</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 50px 20px;
+                    color: yellowgreen;
+                    background-attachment: fixed;
+                    background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                    margin: 0;
+                }
+                h2 {
+                    color: rgb(221, 187, 15);
+                    text-shadow: black 1px 1px;
+                    font-family: "Rubik Wet Paint", system-ui;
+                    font-weight: 1;
+                    font-size: 38px;
+                }
+                a {
+                    font-family: "Kavoon", system-ui;
+                    font-weight: 0.5;
+                }
+                p {
+                    color: rgb(19, 221, 150);
+                }
+                .container {
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+                .btn {
+                    display: block;
+                    margin: 15px 0;
+                    padding: 12px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                }
+                .btn-browser {
+                    background-color: #0088cc;
+                    color: white;
+                }
+                .btn-playstore {
+                    background-color: #24292e;
+                    color: white;
+                    font-size: 15px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>OG CORE</h2>
+                <br>
+                ${codeResultHTML}
+                <br>
+                <a href="/pair" class="btn btn-browser">Try Another Number</a>
+                <a href="/" class="btn btn-playstore">Back to Home</a>
+            </div>
+        </body>
+        </html>
+
+           <!-- <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
                 <h2>Generate WhatsApp Pairing Code</h2>
                 <form action="/pair" method="GET">
                     <input type="text" name="phone" placeholder="e.g. 2348123456789" style="padding: 10px; font-size: 16px; width: 250px; border-radius: 5px; border: 1px solid #ccc;" required />
@@ -916,7 +1319,7 @@ app.get('/pair', async (req, res) => {
         console.error("Pairing code error:", err);
         res.status(500).send(`<h2>Error generating pairing code: ${err.message}</h2>`);
     }
-});
+}); */
 
 // 3. Listen on port (Must be the absolute last thing in the file)
 app.listen(PORT, () => {
