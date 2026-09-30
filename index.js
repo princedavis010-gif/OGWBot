@@ -124,7 +124,8 @@ async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
     
     const sock = makeWASocket({
-        // ... your existing socket options ...
+        logger: pino({ level: 'silent' }),
+        auth: state
     });
 
     // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
@@ -133,11 +134,6 @@ async function connectToWhatsApp() {
     // Your existing Baileys setup (useAuthState, makeWASocket, etc.)
     // ...
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-
-    const sock = makeWASocket({
-        logger: pino({ level: 'silent' }),
-        auth: state
-    });
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
@@ -678,10 +674,6 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 }
 
 connectToWhatsApp();
-
-const sock = makeWASocket({
-    // your existing config...
-});
 
 global.activeSock = sock; // <-- Save reference so the web route can access it
 
