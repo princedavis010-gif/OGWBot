@@ -38,6 +38,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 ┃ 🤖 AI COMMAND
 ┗━━━━━━━━━━━━━━━━━
 │ ➜ $img
+│ ➜ .imagine
 │ ➜ Hey OG ...
 │ ➜ gen
 

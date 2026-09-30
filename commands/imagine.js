@@ -4,6 +4,8 @@ module.exports = async function handleImagine({ sock, m, sender, text, sleep }) 
     let prompt = '';
     if (text.toLowerCase().startsWith('$img')) {
         prompt = text.slice(4).trim();
+    } else if (text.toLowerCase().startsWith('.imagine')) {
+        prompt = text.slice(8).trim();
     } else {
         prompt = text.slice(3).trim();
     }

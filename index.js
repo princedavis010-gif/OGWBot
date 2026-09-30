@@ -571,7 +571,7 @@ if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.
 }
 
         // .imagine / .image Command
-       if (text.toLowerCase().startsWith('$img') || text.toLowerCase().startsWith('gen')) {
+       if (text.toLowerCase().startsWith('$img') || text.toLowerCase().startsWith('gen') || text.toLowerCase().startsWith('.imagine')) {
     await handleImagine({ sock, m, sender, text, sleep });
     return;
 }
@@ -612,7 +612,7 @@ if (text.toLowerCase() === '.life' || text.toLowerCase() === '.death') {
 }
 
 // 🎵 Song Downloader Command (.song, .music, .mp3)
-if (text.toLowerCase().startsWith('play me') || text.toLowerCase().startsWith('.music') || text.toLowerCase().startsWith('.vibe')) {
+if (text.toLowerCase().startsWith('.song') || text.toLowerCase().startsWith('.music') || text.toLowerCase().startsWith('.vibe')) {
     await handleSong({ sock, m, sender, text, sleep });
     return;
 }
@@ -627,13 +627,18 @@ if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text
     return;
 }
 
-if (text.toLowerCase() === '.list' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
+if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
     await handleMenu({ sock, m, sender, sleep });
     return;
 }
 
 if (text.toLowerCase().startsWith('.add') || text.toLowerCase().startsWith('.addmember')) {
     await handleAdd({ sock, m, sender, text, sleep });
+    return;
+}
+
+if (text.toLowerCase().startsWith('.mylove')) {
+    await handleMyLove({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo });
     return;
 }
 
