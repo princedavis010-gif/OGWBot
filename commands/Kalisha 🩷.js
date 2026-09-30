@@ -133,4 +133,4 @@ module.exports = async function handleSong({ sock, m, sender, text, sleep }) {
         console.error('Song plugin error:', err.message);
         await sock.sendMessage(chatId, { text: `❌ Failed: ${err.message}` });
     }
-};
+}; */
