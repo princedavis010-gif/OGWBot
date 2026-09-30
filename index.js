@@ -855,7 +855,7 @@ app.get('/qr', async (req, res) => {
             <div class="container">
                 <h2>OG CORE</h2>
                 <br>
-                ${qrContent}
+                <img src="${qrImageURL}" alt="QR Code" />
                 <br>
                 <a href="/qr" class="btn btn-browser">Refresh QR</a>
                 <a href="/" class="btn btn-playstore">Back to Home</a>
