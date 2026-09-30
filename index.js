@@ -1,3 +1,8 @@
+const express = require('express');
+const qrcode = require('qrcode');
+const app = express();
+const PORT = process.env.PORT || 3000;
+global.latestQR = null;
 require('dotenv').config();
 const handleWelcomeOn = require('./commands/welcomeon');
 const handleWelcomeOff = require('./commands/welcomeoff');
@@ -652,3 +657,29 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 }
 
 connectToWhatsApp();
+
+app.get('/', (req, res) => {
+    res.send("OGWBot is running smoothly 24/7! Go to /qr to scan your code.");
+});
+
+app.get('/qr', async (req, res) => {
+    if (!global.latestQR) {
+        return res.send(`<h2>No QR code available yet or bot is already connected! Check your logs.</h2>`);
+    }
+    try {
+        const qrImageURL = await qrcode.toDataURL(global.latestQR);
+        res.send(`
+            <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+                <h2>Scan this QR Code with WhatsApp</h2>
+                <img src="${qrImageURL}" alt="WhatsApp QR Code" style="width: 300px; height: 300px; border: 5px solid #25D366; border-radius: 10px;" />
+                <p>Refresh this page if it expires.</p>
+            </div>
+        `);
+    } catch (err) {
+        res.status(500).send('Error generating QR code image');
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
