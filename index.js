@@ -672,6 +672,12 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
 connectToWhatsApp();
 
+const sock = makeWASocket({
+    // your existing config...
+});
+
+global.activeSock = sock; // <-- Save reference so the web route can access it
+
 app.get('/', (req, res) => {
     res.send("OGWBot is running smoothly 24/7! Go to /qr to scan your code.");
 });
