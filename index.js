@@ -53,7 +53,7 @@ const OWNER_NUMBER = "34798496137284";
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
-const qrcode = require('qrcode-terminal');
+// const qrcode = require('qrcode-terminal');
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function getSenderNumber(jid) {
