@@ -212,6 +212,7 @@ sock.ev.on('group-participants.update', async (update) => {
     if (type !== 'notify') return;
 
     for (const m of messages) {
+        try {
         if (!m.message) continue;
 
         // If the message was sent by your account (fromMe):
@@ -324,7 +325,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
             const mode = normalizedText === '.admin' ? 'admin' : 'group';
             setCommandAccessMode(mode);
             const message = mode === 'admin'
-                ? '🔒 Admin mode enabled. Only group admins and the bot owner can use bot commands.'
+                ? '🔒 Admin mode enabled. Only group admins and Owner can use bot commands.'
                 : '🔓 Group mode enabled. Admin-only command access is off.';
             await sock.sendMessage(sender, { text: message }, { quoted: m });
             return;
@@ -793,6 +794,9 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 await sock.sendMessage(sender, { text: "Calm, one at a time please. 🙂" });
             }
             return;
+        }
+        } catch (error) {
+            console.error(`Failed to process WhatsApp message in ${m.key?.remoteJid || 'unknown chat'}:`, error);
         }
     }
     });
