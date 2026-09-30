@@ -121,6 +121,10 @@ function logBotAction(jid, botMessage) {
 const activeTrivia = new Map(); // Tracks active trivia sessions per group JID
 
 async function connectToWhatsApp() {
+    console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
+    
+    // Your existing Baileys setup (useAuthState, makeWASocket, etc.)
+    // ...
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
     const sock = makeWASocket({
