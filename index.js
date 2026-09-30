@@ -794,11 +794,80 @@ app.get('/qr', async (req, res) => {
     try {
         const qrImageURL = await qrcode.toDataURL(global.latestQR);
         res.send(`
-            <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+
+                <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+            <title>OG CORE - QR Scan</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 50px 20px;
+                    color: yellowgreen;
+                    background-attachment: fixed;
+                    background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                    margin: 0;
+                }
+                h2 {
+                    color: rgb(221, 187, 15);
+                    text-shadow: black 1px 1px;
+                    font-family: "Rubik Wet Paint", system-ui;
+                    font-weight: 1;
+                    font-size: 38px;
+                }
+                a {
+                    font-family: "Kavoon", system-ui;
+                    font-weight: 0.5;
+                }
+                p {
+                    color: rgb(19, 221, 150);
+                }
+                .container {
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+                .btn {
+                    display: block;
+                    margin: 15px 0;
+                    padding: 12px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                }
+                .btn-browser {
+                    background-color: #0088cc;
+                    color: white;
+                }
+                .btn-playstore {
+                    background-color: #24292e;
+                    color: white;
+                    font-size: 15px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>OG CORE</h2>
+                <br>
+                ${qrContent}
+                <br>
+                <a href="/qr" class="btn btn-browser">Refresh QR</a>
+                <a href="/" class="btn btn-playstore">Back to Home</a>
+            </div>
+        </body>
+        </html>
+
+        <!--    <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
                 <h2>Scan this QR Code with WhatsApp</h2>
                 <img src="${qrImageURL}" alt="WhatsApp QR Code" style="width: 300px; height: 300px; border: 5px solid #25D366; border-radius: 10px;" />
                 <p>Refresh this page if it expires.</p>
-            </div>
+            </div> -->
         `);
     } catch (err) {
         res.status(500).send('Error generating QR code image');
