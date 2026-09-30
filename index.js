@@ -355,9 +355,11 @@ if (text.toLowerCase().startsWith('.lock')) {
     return;
 }
 
-if (command === '.scr') {
-    await handleScr.handle(sock, m, { from, quoted });
+if (text.toLowerCase().startsWith('.scr')) {
+    await handleScr(sock, m, text, sender, sleep, getContextInfo);
+    return;
 }
+
 
 		// 🔓 Unlock Command Handler
 if (text.toLowerCase().startsWith('.unlock')) {
