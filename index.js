@@ -356,7 +356,7 @@ if (text.toLowerCase().startsWith('.lock')) {
 }
 
 if (text.toLowerCase().startsWith('.scr')) {
-    await handleScr(sock, m, text, sender, sleep, getContextInfo);
+    await handleScr.handle(sock, m, { from: sender, quoted: contextInfo?.quotedMessage });
     return;
 }
 
