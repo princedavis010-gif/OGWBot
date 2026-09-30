@@ -122,14 +122,15 @@ const activeTrivia = new Map(); // Tracks active trivia sessions per group JID
 
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
-    
+     
+    global.activeSock = sock;
+
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state
     });
 
     // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
-    global.activeSock = sock;
 
     // Your existing Baileys setup (useAuthState, makeWASocket, etc.)
     // ...
