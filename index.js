@@ -726,7 +726,7 @@ app.get('/', (req, res) => {
             text-shadow: black 1px 1px;
             font-family: "Rubik Wet Paint", system-ui;
             font-weight: 1;
-            font-size: 28px;
+            font-size: 38px;
         }
 
         a{
@@ -782,7 +782,7 @@ app.get('/', (req, res) => {
 </html>
 
         
-        OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code.`);
+       <!-- OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code. --> `); 
 });
 
 app.get('/qr', async (req, res) => {
