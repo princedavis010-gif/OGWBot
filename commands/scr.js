@@ -16,9 +16,9 @@ module.exports = {
                 }, { quoted: m });
             }
 
-            await sock.sendMessage(from, { 
-                text: "✂️ Cropping image to 1:1 square & creating sticker..." 
-            }, { quoted: m });
+       //     await sock.sendMessage(from, { 
+         //       text: "✂️ Cropping image to 1:1 square & creating sticker..." 
+           // }, { quoted: m });
 
             // Download the image stream
             const stream = await downloadContentFromMessage(targetMessage, 'image');
