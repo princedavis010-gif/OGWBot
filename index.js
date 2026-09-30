@@ -710,7 +710,7 @@ app.get('/', (req, res) => {
         href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap"
         rel="stylesheet">
     
-    <title>Open CapCut</title>
+    <title>OG CORE</title>
     <style>
         body {
             font-family: Arial, sans-serif;
