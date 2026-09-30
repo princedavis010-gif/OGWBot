@@ -1,6 +1,6 @@
 async function handleWelcome({ sock, update, sleep }) {
     const { id, participants, action } = update;
-    const { isWelcomeEnabled } = require('./utils/welcomeControl');
+    const { isWelcomeEnabled } = require('../utils/welcomeControl');
 
     // Only trigger when new members are added/join the group
     if (action !== 'add') return;
