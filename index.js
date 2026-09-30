@@ -140,6 +140,16 @@ async function connectToWhatsApp() {
             qrcode.generate(qr, { small: true });
         } */
 
+            if (qr) {
+        global.latestQR = qr;
+        console.log('📸 QR code received from WhatsApp and saved to global variable!');
+    }
+
+    if (connection === 'open') {
+        global.latestQR = null; // Clears it once you scan successfully
+        console.log('✅ OGWBot connected successfully to WhatsApp!');
+    }
+
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed. Reconnecting...', shouldReconnect);
