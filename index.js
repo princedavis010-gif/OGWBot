@@ -584,7 +584,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
     return;
 }
 
-        if (text.toLowerCase().startsWith('hi')) {
+        if (text.toLowerCase().startsWith('custom..')) {
     await handleFlog({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo });
     return;
 }
@@ -695,12 +695,101 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 connectToWhatsApp(); // <-- Save reference so the web route can access it
 
 app.get('/', (req, res) => {
-    res.send("OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code.");
+    res.send(`
+        
+        <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fruktur:ital@0;1&family=Kavoon&family=Rubik+Dirt&family=Rubik+Doodle+Shadow&family=Rubik+Glitch&family=Rubik+Wet+Paint&display=swap"
+        rel="stylesheet">
+    
+    <title>Open CapCut</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+            color: yellowgreen;
+            background-attachment: fixed;
+            background-image: linear-gradient(150deg, #0f172a, #1e1b4b); 312e81);
+        }
+
+        h2 {
+            color: rgb(221, 187, 15);
+            text-shadow: black 1px 1px;
+            font-family: "Rubik Wet Paint", system-ui;
+            font-weight: 1;
+            font-size: 28px;
+        }
+
+        a{
+            font-family: "Kavoon", system-ui;
+            font-weight: 0.5;
+        }
+
+        p {
+            color: rgb(19, 221, 150);
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .btn {
+            display: block;
+            margin: 15px 0;
+            padding: 12px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .btn-browser {
+            background-color: #0088cc;
+            color: white;
+        }
+        .btn-playstore {
+            background-color: #24292e;
+            color: white;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>OG CORE</h2>
+      <!--  <p>If the app did not open, CapCut might not be installed on your device.</p> -->
+        <br>
+        
+        <!-- Option 1: Open in the web browser -->
+        <a href="https://og-core.onrender.com/qr" class="btn btn-browser">
+            Click here to scan QR
+        </a>
+        
+        <!-- Connect WhatsApp with Pairing Code -->
+        <a href="https://og-core.onrender.com/pair" class="btn btn-playstore" target="_blank">
+            Click here to get Pairing Code
+        </a>
+    </div>
+
+</body>
+</html>
+
+        
+        OGWBot is running smoothly 24/7! Go to /qr for QR code or /pair for pairing code.`);
 });
 
 app.get('/qr', async (req, res) => {
     if (!global.latestQR) {
-        return res.send(`<h2>No QR code available yet or bot is already connected! Check your logs.</h2>`);
+        return res.send(`
+            
+            <h2>No QR code available yet or bot is already connected! Check your logs.</h2>`);
     }
     try {
         const qrImageURL = await qrcode.toDataURL(global.latestQR);
