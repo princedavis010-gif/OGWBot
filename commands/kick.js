@@ -47,7 +47,7 @@ async function handleKick(sock, m, text, sender, sleep) {
         await sleep(1000);
         await sock.groupParticipantsUpdate(sender, [targetJid], 'remove');
 
-        const kickText = `╚»☬🌟◻️♥ GOODBYE ♥◻️🌟☬«╝\n\n✨ Evicted from *${groupName}*! ✨\n\n👤 @${phoneNumber}\n\n> OG`;
+        const kickText = `╚»☬🌟◻️♥ GOODBYE ♥◻️🌟☬«╝\n\n✨ Evicted from *${groupName}*! ✨\n\n👤 @${phoneNumber}\n\n> 𝓞𝓖 𝓒𝓞𝓡𝓔`;
 
         await sock.sendMessage(sender, { 
             text: kickText, 

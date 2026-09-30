@@ -23,7 +23,7 @@ async function handleWelcome({ sock, update, sleep }) {
             console.error("Failed to fetch group metadata for welcome:", error);
         }
 
-        const welcomeText = `╚»☬🌟◻️♥ WELCOME ♥◻️🌟☬«╝\n\n✨ Welcome to *${groupName}*! ✨\n\n👤 @${phoneNumber}\n\n> OG`;
+        const welcomeText = `╚»☬🌟◻️♥ WELCOME ♥◻️🌟☬«╝\n\n✨ Welcome to *${groupName}*! ✨\n\n👤 @${phoneNumber}\n\n> 𝓞𝓖 𝓒𝓞𝓡𝓔`;
 
         await sleep(1500);
         await sock.sendMessage(id, {
