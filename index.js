@@ -136,6 +136,7 @@ function ownerNumberSetupMarkup() {
             ownerInput.value = '';
             tokenInput.value = '';
             ownerInput.type = 'tel';
+            ownerInput.placeholder = 'Leave blank to keep the saved owner number';
             tokenInput.type = 'password';
             ownerInput.readOnly = false;
             tokenInput.readOnly = false;
@@ -256,11 +257,29 @@ registerActivityDashboard(app, {
     resolveLid: (lid) => global.activeSock?.signalRepository?.lidMapping?.getPNForLID(lid)
 });
 
+async function saveOwnerNumber(ownerNumber) {
+    const normalizedOwnerNumber = String(ownerNumber || '').replace(/\D/g, '');
+    if (!/^\d{7,15}$/.test(normalizedOwnerNumber)) {
+        throw new Error('Owner number must contain 7 to 15 digits.');
+    }
+
+    await redis.set('bot_owner_number', normalizedOwnerNumber);
+    const savedValue = await redis.get('bot_owner_number');
+    const savedOwnerNumber = String(savedValue || '').replace(/\D/g, '');
+    if (savedOwnerNumber !== normalizedOwnerNumber) {
+        throw new Error('Owner number was not confirmed in Redis after saving.');
+    }
+
+    OWNER_NUMBER = normalizedOwnerNumber;
+    console.log('Owner number confirmed in Upstash Redis.');
+    return normalizedOwnerNumber;
+}
+
 async function restoreOwnerNumber() {
     if (ENV_OWNER_NUMBER) {
         OWNER_NUMBER = ENV_OWNER_NUMBER;
         try {
-            await redis.set('bot_owner_number', OWNER_NUMBER);
+            await saveOwnerNumber(ENV_OWNER_NUMBER);
         } catch (error) {
             console.error('Could not persist configured owner number to Redis:', error);
         }
@@ -268,8 +287,12 @@ async function restoreOwnerNumber() {
     }
 
     const savedOwnerNumber = await redis.get('bot_owner_number');
-    if (typeof savedOwnerNumber === 'string' && /^\d{7,15}$/.test(savedOwnerNumber)) {
-        OWNER_NUMBER = savedOwnerNumber;
+    const normalizedOwnerNumber = String(savedOwnerNumber || '').replace(/\D/g, '');
+    if (/^\d{7,15}$/.test(normalizedOwnerNumber)) {
+        OWNER_NUMBER = normalizedOwnerNumber;
+        console.log('Restored owner number from Upstash Redis.');
+    } else {
+        console.log('No valid owner number found in Upstash Redis yet.');
     }
 }
 
@@ -431,9 +454,8 @@ async function connectToWhatsApp() {
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
 
             if (!OWNER_NUMBER && botPhoneNumber) {
-                OWNER_NUMBER = botPhoneNumber;
                 try {
-                    await redis.set('bot_owner_number', OWNER_NUMBER);
+                    await saveOwnerNumber(botPhoneNumber);
                 } catch (error) {
                     console.error('Could not persist the paired bot number as owner:', error);
                 }
@@ -1189,8 +1211,7 @@ app.post('/owner-number', async (req, res) => {
     }
 
     try {
-        await redis.set('bot_owner_number', ownerNumber);
-        OWNER_NUMBER = ownerNumber;
+        await saveOwnerNumber(ownerNumber);
         res.redirect('/qr');
     } catch (error) {
         console.error('Could not save owner number:', error);
@@ -1474,8 +1495,7 @@ app.post('/pair', async (req, res) => {
 
     try {
         const code = await global.activeSock.requestPairingCode(botNumber);
-        await redis.set('bot_owner_number', ownerNumber);
-        OWNER_NUMBER = ownerNumber;
+        await saveOwnerNumber(ownerNumber);
         global.whatsappConnection.status = 'awaiting-pairing';
         global.whatsappConnection.method = 'pairing code';
 
