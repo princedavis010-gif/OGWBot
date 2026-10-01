@@ -140,7 +140,7 @@ function dashboardPage() {
     </script></body></html>`;
 }
 
-function registerActivityDashboard(app, { redis, password, getConnectionStatus }) {
+function registerActivityDashboard(app, { redis, password, getConnectionStatus, getOwnerNumber, getBotNumbers }) {
     const isEnabled = password.length >= 32;
     const isAuthenticated = (req) => isEnabled && hasValidSession(req, password);
 
@@ -185,10 +185,22 @@ function registerActivityDashboard(app, { redis, password, getConnectionStatus }
                 if (typeof event !== 'string') return event;
                 try { return JSON.parse(event); } catch { return null; }
             }).filter(Boolean);
+            const ownerNumber = getOwnerNumber();
+            const botNumbers = getBotNumbers();
+            const labelledEvents = events.map((event) => {
+                const userNumber = String(event.user || '').replace(/\D/g, '');
+                if (ownerNumber && userNumber === ownerNumber) {
+                    return { ...event, user: `Owner · ${event.user}` };
+                }
+                if (userNumber && botNumbers.includes(userNumber)) {
+                    return { ...event, user: `Bot · ${event.user}` };
+                }
+                return event;
+            });
             res.json({
                 connection: getConnectionStatus(),
                 uptimeSeconds: Math.floor(process.uptime()),
-                events
+                events: labelledEvents
             });
         } catch (error) {
             console.error('Could not load activity feed:', error.message);

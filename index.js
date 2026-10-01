@@ -217,7 +217,9 @@ const redis = new Redis({
 registerActivityDashboard(app, {
     redis,
     password: ACTIVITY_DASHBOARD_PASSWORD,
-    getConnectionStatus: () => global.whatsappConnection
+    getConnectionStatus: () => global.whatsappConnection,
+    getOwnerNumber: () => OWNER_NUMBER,
+    getBotNumbers: () => [getSenderNumber(botJid), getSenderNumber(botLid)].filter(Boolean)
 });
 
 async function restoreOwnerNumber() {
