@@ -109,13 +109,34 @@ function isValidPairingSetupToken(candidate) {
 }
 
 function ownerNumberSetupMarkup() {
-    return `<form action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
+    const isConfigured = /^\d{7,15}$/.test(OWNER_NUMBER) && PAIRING_SETUP_TOKEN.length >= 32;
+    const maskedOwnerNumber = isConfigured ? '*'.repeat(OWNER_NUMBER.length) : '';
+    const maskedSetupToken = isConfigured ? '*'.repeat(PAIRING_SETUP_TOKEN.length) : '';
+
+    return `<form id="owner-setup-form" action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
         <label for="ownerNumber" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Separate owner number (optional)</label>
-        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <input type="${isConfigured ? 'password' : 'tel'}" id="ownerNumber" name="ownerNumber" value="${maskedOwnerNumber}" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" ${isConfigured ? 'readonly' : ''} style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
         <label for="setupToken" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Deployment setup token</label>
-        <input type="password" id="setupToken" name="setupToken" required autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
-        <button type="submit" style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Save owner number</button>
-    </form>`;
+        <input type="password" id="setupToken" name="setupToken" value="${maskedSetupToken}" ${isConfigured ? 'readonly' : 'required'} autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <button type="button" id="edit-owner-setup" ${isConfigured ? '' : 'hidden'} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Edit</button>
+        <button type="submit" id="save-owner-setup" ${isConfigured ? 'hidden' : ''} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Save owner number</button>
+    </form>
+    ${isConfigured ? `<script>
+        document.getElementById('edit-owner-setup').addEventListener('click', () => {
+            const ownerInput = document.getElementById('ownerNumber');
+            const tokenInput = document.getElementById('setupToken');
+            ownerInput.value = '';
+            tokenInput.value = '';
+            ownerInput.type = 'tel';
+            tokenInput.type = 'password';
+            ownerInput.readOnly = false;
+            tokenInput.readOnly = false;
+            tokenInput.required = true;
+            document.getElementById('edit-owner-setup').hidden = true;
+            document.getElementById('save-owner-setup').hidden = false;
+            ownerInput.focus();
+        });
+    </script>` : ''}`;
 }
 
 function getSenderNumber(jid) {
@@ -1388,6 +1409,7 @@ app.post('/pair', async (req, res) => {
                 <div class="container">
                     <h2>OG CORE</h2>
                     ${connectionStatusMarkup()}
+                    ${ownerNumberSetupMarkup()}
                     <h3 style="color: rgb(221, 187, 15); font-family: 'Kavoon'; margin-bottom: 5px;">Your Pairing Code:</h3>
                     <div class="code-display">${code?.match(/.{1,4}/g)?.join('-') || code}</div>
                     <p>1. Open WhatsApp on your phone.</p>
