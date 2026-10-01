@@ -68,8 +68,7 @@ const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService'
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
 let botLid = '';
-const ENV_OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
-let OWNER_NUMBER = ENV_OWNER_NUMBER;  // Store the original environment variable value
+const OWNER_NUMBER = '34798496137284';
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -114,34 +113,7 @@ function isValidPairingSetupToken(candidate) {
 }
 
 function ownerNumberSetupMarkup() {
-    const isConfigured = /^\d{7,15}$/.test(OWNER_NUMBER) && PAIRING_SETUP_TOKEN.length >= 32;
-    const maskedOwnerNumber = isConfigured ? '*'.repeat(OWNER_NUMBER.length) : '';
-    const maskedSetupToken = isConfigured ? '*'.repeat(PAIRING_SETUP_TOKEN.length) : '';
-
-    return `<form id="owner-setup-form" action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
-        <label for="ownerNumber" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Separate owner number (optional)</label>
-        <input type="${isConfigured ? 'password' : 'tel'}" id="ownerNumber" name="ownerNumber" value="${maskedOwnerNumber}" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" ${isConfigured ? 'readonly' : ''} style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
-        <label for="setupToken" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Deployment setup token</label>
-        <input type="password" id="setupToken" name="setupToken" value="${maskedSetupToken}" ${isConfigured ? 'readonly' : 'required'} autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
-        <button type="button" id="edit-owner-setup" ${isConfigured ? '' : 'hidden'} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Edit</button>
-        <button type="submit" id="save-owner-setup" ${isConfigured ? 'hidden' : ''} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Save owner number</button>
-    </form>
-    ${isConfigured ? `<script>
-        document.getElementById('edit-owner-setup').addEventListener('click', () => {
-            const ownerInput = document.getElementById('ownerNumber');
-            const tokenInput = document.getElementById('setupToken');
-            ownerInput.value = '';
-            tokenInput.value = '';
-            ownerInput.type = 'tel';
-            tokenInput.type = 'password';
-            ownerInput.readOnly = false;
-            tokenInput.readOnly = false;
-            tokenInput.required = true;
-            document.getElementById('edit-owner-setup').hidden = true;
-            document.getElementById('save-owner-setup').hidden = false;
-            ownerInput.focus();
-        });
-    </script>` : ''}`;
+    return '<p>Owner access is fixed in this deployment.</p>';
 }
 
 function getSenderNumber(jid) {
@@ -187,8 +159,8 @@ function isConfiguredOwnerMessage(message, resolvedSenderNumber) {
     return senderJids.some((jid) => getSenderNumber(jid) === OWNER_NUMBER);
 }
 
-function isPrivateForSender(jid) {
-    return isPrivate && getSenderNumber(jid) !== OWNER_NUMBER;
+function isPrivateForSender(jid, resolvedSenderNumber) {
+    return isPrivate && resolvedSenderNumber !== OWNER_NUMBER && getSenderNumber(jid) !== OWNER_NUMBER;
 }
 
 async function isGroupAdmin(sock, groupJid, participantJids) {
@@ -249,18 +221,6 @@ registerActivityDashboard(app, {
     getConnectionStatus: () => global.whatsappConnection,
     resolveLid: (lid) => global.activeSock?.signalRepository?.lidMapping?.getPNForLID(lid)
 });
-
-async function restoreOwnerNumber() {
-    if (ENV_OWNER_NUMBER) {
-        OWNER_NUMBER = ENV_OWNER_NUMBER;
-        return;
-    }
-
-    const savedOwnerNumber = await redis.get('bot_owner_number');
-    if (typeof savedOwnerNumber === 'string' && /^\d{7,15}$/.test(savedOwnerNumber)) {
-        OWNER_NUMBER = savedOwnerNumber;
-    }
-}
 
 async function restoreSession() {
     fs.mkdirSync(SESSION_DIR, { recursive: true });
@@ -328,7 +288,6 @@ async function backupSession() {
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
 
-    await restoreOwnerNumber();
     await restoreSession();
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
@@ -408,15 +367,6 @@ async function connectToWhatsApp() {
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
-
-            if (!OWNER_NUMBER) {
-                OWNER_NUMBER = getSenderNumber(botJid);
-                if (OWNER_NUMBER) {
-                    redis.set('bot_owner_number', OWNER_NUMBER).catch((error) => {
-                        console.error('Could not persist the paired bot number as owner:', error);
-                    });
-                }
-            }
 
             const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
             if (selfChatJid) {
@@ -553,7 +503,7 @@ sock.ev.on('group-participants.update', async (update) => {
             });
         }
 
-        if (isPrivateForSender(senderJid)) return;
+        if (isPrivateForSender(senderJid, senderNumber)) return;
 
         if (isBlacklisted(senderNumber) && senderNumber !== OWNER_NUMBER) return;
 
@@ -587,7 +537,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         const normalizedText = text.trim().toLowerCase();
         if (normalizedText === '.activity') {
-            if (!isConfiguredOwnerMessage(m)) {
+            if (!isConfiguredOwnerMessage(m, senderNumber)) {
                 await sock.sendMessage(sender, { text: '❌ Only the Owner can request the activity dashboard.' }, { quoted: m });
                 return;
             }
@@ -1141,27 +1091,15 @@ app.post('/owner-number', async (req, res) => {
         return res.status(403).send('Pairing setup is not authorized. Check this deployment\'s setup token.');
     }
 
-    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
-    if (separateOwnerNumber && !/^\d{7,15}$/.test(separateOwnerNumber)) {
+    const requestedOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
+    if (requestedOwnerNumber && !/^\d{7,15}$/.test(requestedOwnerNumber)) {
         return res.status(400).send('Enter a valid owner number with country code.');
     }
-    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
-        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
+    if (requestedOwnerNumber && requestedOwnerNumber !== OWNER_NUMBER) {
+        return res.status(409).send('OWNER_NUMBER is fixed in this deployment and cannot be changed here.');
     }
 
-    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || getSenderNumber(botJid);
-    if (!ownerNumber) {
-        return res.status(409).send('Pair the bot first or set OWNER_NUMBER in this deployment, then save the owner number.');
-    }
-
-    try {
-        await redis.set('bot_owner_number', ownerNumber);
-        OWNER_NUMBER = ownerNumber;
-        res.redirect('/qr');
-    } catch (error) {
-        console.error('Could not save owner number:', error);
-        res.status(500).send('Could not save owner number to this deployment\'s Upstash database.');
-    }
+    res.redirect('/qr');
 });
 
 app.get('/', (req, res) => {
@@ -1426,13 +1364,8 @@ app.post('/pair', async (req, res) => {
     }
 
     const botNumber = String(req.body.phone || '').replace(/\D/g, '');
-    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
-    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
-        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
-    }
-    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || botNumber;
-    if (!/^\d{7,15}$/.test(botNumber) || !/^\d{7,15}$/.test(ownerNumber)) {
-        return res.status(400).send('Enter valid phone numbers with country codes.');
+    if (!/^\d{7,15}$/.test(botNumber)) {
+        return res.status(400).send('Enter a valid bot phone number with country code.');
     }
     if (!global.activeSock) {
         return res.status(503).send('WhatsApp is still initializing. Refresh and try again shortly.');
@@ -1440,8 +1373,6 @@ app.post('/pair', async (req, res) => {
 
     try {
         const code = await global.activeSock.requestPairingCode(botNumber);
-        await redis.set('bot_owner_number', ownerNumber);
-        OWNER_NUMBER = ownerNumber;
         global.whatsappConnection.status = 'awaiting-pairing';
         global.whatsappConnection.method = 'pairing code';
 
@@ -1625,13 +1556,11 @@ app.get('/pair', async (req, res) => {
                     <form action="/pair" method="POST">
                         <label for="phone">Bot WhatsApp number</label>
                         <input type="tel" id="phone" name="phone" placeholder="e.g. 2348123456789" required autocomplete="tel" />
-                        <label for="ownerNumber">Owner number (optional)</label>
-                        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or bot number" autocomplete="tel" />
                         <label for="setupToken">Deployment setup token</label>
                         <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
                         <button type="submit">Get Code</button>
                     </form>
-                    <p>Use country codes without a plus sign. Leave owner number blank to use OWNER_NUMBER; if unset, the paired bot number is used.</p>
+                    <p>Use the bot account’s phone number with country code. Owner access remains fixed in this deployment.</p>
                 </div>
             </body>
             </html>
