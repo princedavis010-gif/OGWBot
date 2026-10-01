@@ -376,7 +376,32 @@ async function connectToWhatsApp() {
     let messageHandlersReady = false;
     let readyAnnouncementSent = false;
 
-    const announceReady = () => {
+    //
+const announceReady = async () => {
+    if (!connectionIsOpen || !messageHandlersReady || readyAnnouncementSent || !botJid) return;
+    if (global.activeSock !== sock) return;
+
+    readyAnnouncementSent = true;
+    global.whatsappConnection.status = 'connected';
+    global.whatsappConnection.method ||= 'saved session';
+    const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
+    if (!selfChatJid) return;
+
+    // Sleep before sending
+    await sleep(4000);
+
+    try {
+        const sentMessage = await sock.sendMessage(selfChatJid, {
+            text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
+        });
+        
+        if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
+    } catch (error) {
+        console.error('Could not send bot-ready confirmation to self-chat:', error);
+    }
+};
+
+   /* const announceReady = () => {
         if (!connectionIsOpen || !messageHandlersReady || readyAnnouncementSent || !botJid) return;
         if (global.activeSock !== sock) return;
 
@@ -394,7 +419,7 @@ async function connectToWhatsApp() {
         }).catch((error) => {
             console.error('Could not send bot-ready confirmation to self-chat:', error);
         });
-    };
+    }; */
 
     // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
 
