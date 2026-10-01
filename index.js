@@ -69,6 +69,7 @@ let showTerminalLogs = false; // Enabled by default so you can see incoming mess
 let botJid = '';
 let botLid = '';
 const OWNER_NUMBER = '34798496137284';
+let ENV_OWNER_NUMBER = OWNER_NUMBER;
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
