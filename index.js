@@ -147,6 +147,17 @@ function getSenderNumber(jid) {
     return jid ? jid.split('@')[0].split(':')[0] : '';
 }
 
+function isConfiguredOwnerMessage(message) {
+    if (!OWNER_NUMBER) return false;
+    const senderJids = [
+        message.key?.participant,
+        message.key?.participantAlt,
+        message.key?.remoteJid,
+        message.key?.remoteJidAlt
+    ];
+    return senderJids.some((jid) => getSenderNumber(jid) === OWNER_NUMBER);
+}
+
 function isPrivateForSender(jid) {
     return isPrivate && getSenderNumber(jid) !== OWNER_NUMBER;
 }
@@ -529,7 +540,10 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         const normalizedText = text.trim().toLowerCase();
         if (normalizedText === '.activity') {
-            if (senderNumber !== OWNER_NUMBER) return;
+            if (!isConfiguredOwnerMessage(m)) {
+                await sock.sendMessage(sender, { text: '❌ Only the configured owner can request the activity dashboard.' }, { quoted: m });
+                return;
+            }
 
             const ownerChat = sender.endsWith('@g.us')
                 ? `${OWNER_NUMBER}@s.whatsapp.net`
