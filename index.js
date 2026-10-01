@@ -68,8 +68,9 @@ const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService'
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
 let botLid = '';
+let botPhoneNumber = '';
 const ENV_OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
-let OWNER_NUMBER = ENV_OWNER_NUMBER; 
+let OWNER_NUMBER = ENV_OWNER_NUMBER || '34798496137284';
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -407,6 +408,8 @@ async function connectToWhatsApp() {
             console.log('🤖 Bot successfully connected to WhatsApp!');
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
+            const connectedPhoneNumber = getSenderNumber(botJid);
+            botPhoneNumber = /^\d{7,15}$/.test(connectedPhoneNumber) ? connectedPhoneNumber : '';
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
 
             if (!OWNER_NUMBER) {
@@ -487,7 +490,7 @@ sock.ev.on('group-participants.update', async (update) => {
         const senderIdentity = await getActivityPhoneNumber({
             message: m,
             senderJid,
-            senderNumber: m.key.fromMe ? getSenderNumber(sock.user?.id || botJid) : '',
+            senderNumber: m.key.fromMe ? botPhoneNumber : '',
             getSenderNumber,
             resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid),
             resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
