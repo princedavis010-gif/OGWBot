@@ -55,7 +55,7 @@ const { handleMute, handleUnmute } = require('./commands/mute');
 const { handleFlirt } = require('./commands/flirt');
 const { handleTruth, handleDare } = require('./commands/truthDare');
 const checkAntiLink = require('./utils/antilink');
-const { getActivityAction, recordBotActivity } = require('./utils/activityLog');
+const { getActivityAction, getActivityPhoneNumber, recordBotActivity } = require('./utils/activityLog');
 const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
 const handleImagine = require('./commands/imagine');
@@ -217,9 +217,7 @@ const redis = new Redis({
 registerActivityDashboard(app, {
     redis,
     password: ACTIVITY_DASHBOARD_PASSWORD,
-    getConnectionStatus: () => global.whatsappConnection,
-    getOwnerNumber: () => OWNER_NUMBER,
-    getBotNumbers: () => [getSenderNumber(botJid), getSenderNumber(botLid)].filter(Boolean)
+    getConnectionStatus: () => global.whatsappConnection
 });
 
 async function restoreOwnerNumber() {
@@ -500,7 +498,7 @@ sock.ev.on('group-participants.update', async (update) => {
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
         if (activityAction) {
             void recordBotActivity(redis, {
-                userNumber: senderNumber,
+                userNumber: getActivityPhoneNumber({ message: m, senderJid, senderNumber, getSenderNumber }),
                 chatJid: sender,
                 action: activityAction
             }).catch((error) => {

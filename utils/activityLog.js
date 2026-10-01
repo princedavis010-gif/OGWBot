@@ -17,6 +17,20 @@ function getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber 
     return null;
 }
 
+function getActivityPhoneNumber({ message, senderJid, senderNumber, getSenderNumber }) {
+    if (message.key?.fromMe) {
+        return /^\d{7,15}$/.test(senderNumber || '') ? senderNumber : 'unknown';
+    }
+
+    const isGroup = message.key?.remoteJid?.endsWith('@g.us');
+    const alternateJid = isGroup ? message.key?.participantAlt : message.key?.remoteJidAlt;
+    const jid = alternateJid || senderJid;
+    if (!alternateJid && jid?.endsWith('@lid')) return 'unknown';
+
+    const number = getSenderNumber(jid);
+    return /^\d{7,15}$/.test(number) ? number : 'unknown';
+}
+
 async function recordBotActivity(redis, { userNumber, chatJid, action }) {
     const isGroup = chatJid?.endsWith('@g.us');
     const event = {
@@ -31,4 +45,4 @@ async function recordBotActivity(redis, { userNumber, chatJid, action }) {
     await redis.ltrim('bot_activity', 0, 499);
 }
 
-module.exports = { getActivityAction, recordBotActivity };
+module.exports = { getActivityAction, getActivityPhoneNumber, recordBotActivity };
