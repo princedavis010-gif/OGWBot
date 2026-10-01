@@ -1,9 +1,10 @@
 // utils/antilink.js
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const { isAntiLinkEnabled } = require('./antiLinkControl');
 
 module.exports = async function checkAntiLink({ sock, m, sender, text, senderNumber, senderJid }) {
     // Only apply anti-link in group chats
-    if (!sender.endsWith('@g.us')) return false;
+    if (!sender.endsWith('@g.us') || !isAntiLinkEnabled(sender)) return false;
 
     // Regex to catch standard URLs, WhatsApp invite links, and common domains
     const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|(chat\.whatsapp\.com\/[^\s]+)|([a-zA-Z0-9][-a-zA-Z0-9]*\.(com|org|net|edu|gov|io|me|co|xyz|ng)[^\s]*)/i;

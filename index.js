@@ -29,6 +29,7 @@ const handleLimit = require('./commands/limit');
 const handleUnlimit = require('./commands/unlimit');
 const { getTargetUser } = require('./utils/targetHelper');
 const { isBlacklisted, checkAndIncrementUsage, blockUser, unblockUser, setUserLimit, removeUserLimit } = require('./utils/userControl');
+const { enableAntiLink, disableAntiLink, isAntiLinkEnabled } = require('./utils/antiLinkControl');
 const handleMenu = require('./commands/menu');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
@@ -622,8 +623,7 @@ sock.ev.on('group-participants.update', async (update) => {
             }
         }
 
-		const isLinkBlocked = await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid });
-		
+        if (await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid })) continue;
 
         sock.readMessages([m.key]).catch((error) => {
             console.error('Failed to mark message as read:', error);
@@ -893,6 +893,37 @@ if (text.toLowerCase() === '.welcome on') {
 
 if (text.toLowerCase() === '.welcome off') {
     await handleWelcomeOff({ sock, m, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep });
+    return;
+}
+
+const antiLinkCommand = text.trim().toLowerCase();
+if (antiLinkCommand === '.antilink on' || antiLinkCommand === '.antilink off') {
+    if (!sender.endsWith('@g.us')) {
+        await sock.sendMessage(sender, { text: '❌ Use .antilink on or .antilink off inside a group.' }, { quoted: m });
+        return;
+    }
+    if (!isOwnerSenderNumber(senderNumber)) {
+        await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can change anti-link settings.' }, { quoted: m });
+        return;
+    }
+
+    if (antiLinkCommand === '.antilink on') {
+        enableAntiLink(sender);
+        await sock.sendMessage(sender, { text: '✅ Anti-link enabled for this group.' }, { quoted: m });
+    } else {
+        disableAntiLink(sender);
+        await sock.sendMessage(sender, { text: '✅ Anti-link disabled for this group.' }, { quoted: m });
+    }
+    return;
+}
+
+if (antiLinkCommand === '.antilink') {
+    if (!sender.endsWith('@g.us')) {
+        await sock.sendMessage(sender, { text: '❌ Anti-link settings are available inside a group.' }, { quoted: m });
+        return;
+    }
+    const state = isAntiLinkEnabled(sender) ? 'enabled' : 'disabled';
+    await sock.sendMessage(sender, { text: `ℹ️ Anti-link is ${state} for this group. Use .antilink on or .antilink off to change it.` }, { quoted: m });
     return;
 }
 
