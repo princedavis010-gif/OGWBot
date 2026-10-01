@@ -266,7 +266,7 @@ async function connectToWhatsApp() {
     // Your existing Baileys setup (useAuthState, makeWASocket, etc.)
     // ...
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
    /*     if (qr) {
@@ -301,8 +301,29 @@ async function connectToWhatsApp() {
                     console.error('WhatsApp reconnect failed:', error);
                     process.exit(1);
                 });
+            } else if (!sessionClearInProgress) {
+                sessionClearInProgress = true;
+                try {
+                    await Promise.allSettled([...sessionBackupTasks]);
+                    await Promise.allSettled([...credentialSaveTasks]);
+                    await Promise.allSettled([...sessionBackupTasks]);
+                    await redis.del('bot_session', 'bot_creds');
+                    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+                    fs.rmSync(LEGACY_SESSION_DIR, { recursive: true, force: true });
+                    console.error('WhatsApp rejected the saved session. Cleared stale credentials; a new pairing is required.');
+                    global.latestQR = null;
+                    global.whatsappConnection = { status: 'connecting', method: 'QR code' };
+                    sessionClearInProgress = false;
+                    connectToWhatsApp().catch((error) => {
+                        console.error('Could not restart with a fresh WhatsApp session:', error);
+                        process.exit(1);
+                    });
+                } catch (error) {
+                    sessionClearInProgress = false;
+                    console.error('Could not clear the rejected WhatsApp session from Redis/local storage:', error);
+                }
             } else {
-                console.error('WhatsApp logged out. Remove the saved auth_info session and pair the bot again.');
+                console.log('Intentional WhatsApp logout; automatic pairing restart skipped.');
             }
         } else if (connection === 'open') {
             void backupSession();
