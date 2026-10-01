@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 global.latestQR = null;
 global.whatsappConnection = { status: 'connecting', method: null };
 require('dotenv').config();
+const PUBLIC_BASE_URL = String(process.env.RENDER_EXTERNAL_URL || 'https://og-core.onrender.com').replace(/\/+$/, '');
 const {
     getMode: getCommandAccessMode,
     hasChainedDotCommands,
@@ -527,6 +528,20 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 }
 
         const normalizedText = text.trim().toLowerCase();
+        if (normalizedText === '.activity') {
+            if (senderNumber !== OWNER_NUMBER) return;
+
+            const ownerChat = sender.endsWith('@g.us')
+                ? `${OWNER_NUMBER}@s.whatsapp.net`
+                : sender;
+            const message = ACTIVITY_DASHBOARD_PASSWORD.length >= 32
+                ? `🔒 Private activity dashboard: ${PUBLIC_BASE_URL}/admin/activity`
+                : 'Activity dashboard is disabled. Set ACTIVITY_DASHBOARD_PASSWORD in this deployment first.';
+
+            await sock.sendMessage(ownerChat, { text: message }, { quoted: sender.endsWith('@g.us') ? undefined : m });
+            return;
+        }
+
         if (normalizedText === '.logout' || normalizedText === '.clearsession') {
             if (senderNumber !== OWNER_NUMBER && !m.key.fromMe) {
                 await sock.sendMessage(sender, { text: '❌ Only the bot owner can clear the WhatsApp session.' }, { quoted: m });
