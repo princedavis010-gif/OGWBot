@@ -11,7 +11,7 @@ module.exports = async function handleImagine({ sock, m, sender, text, sleep }) 
     }
 
     if (!prompt) {
-        await sock.sendMessage(sender, { text: "❌ Guyy, provide a prompt!" });
+        await sock.sendMessage(sender, { text: "❌ Please provide a prompt!" });
         return;
     }
     await sleep(1500);

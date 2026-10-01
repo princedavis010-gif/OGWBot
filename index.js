@@ -656,7 +656,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         if (normalizedText === '.activity') {
             if (!isConfiguredOwnerMessage(m, senderNumber)) {
-                await sock.sendMessage(sender, { text: '❌ Only the Owner can request the activity dashboard.' }, { quoted: m });
+                await sock.sendMessage(sender, { text: '❌ ❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                 return;
             }
 
@@ -673,7 +673,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         if (normalizedText === '.logout' || normalizedText === '.clearsession') {
             if (!isOwnerSenderNumber(senderNumber) && !m.key.fromMe) {
-                await sock.sendMessage(sender, { text: '❌ Only the bot owner can clear the WhatsApp session.' }, { quoted: m });
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                 return;
             }
 
@@ -711,7 +711,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         if (normalizedText === '.admin' || normalizedText === '.group') {
             if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access mode.' }, { quoted: m });
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                 return;
             }
 
@@ -732,7 +732,9 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
         const accessChange = parseAccessChange(text);
         if (accessChange) {
             if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access.' }, { quoted: m });
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.
++
++— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                 return;
             }
 
@@ -903,7 +905,7 @@ if (antiLinkCommand === '.antilink on' || antiLinkCommand === '.antilink off') {
         return;
     }
     if (!isOwnerSenderNumber(senderNumber)) {
-        await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can change anti-link settings.' }, { quoted: m });
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
         return;
     }
 

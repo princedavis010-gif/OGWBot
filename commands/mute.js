@@ -46,7 +46,7 @@ async function handleUnmute({ sock, m, sender, text, sleep, senderJid }) {
     if (!targetJid) {
         await sleep(1000);
         await sock.sendMessage(sender, { 
-            text: "❌ Please mention or reply to the user you want to unmute!" 
+            text: "❌ Please tag or reply to the user you want to unmute!" 
         }, { quoted: m });
         return;
     }

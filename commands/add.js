@@ -9,7 +9,7 @@ async function handleAdd({ sock, m, sender, text, sleep }) {
     const rawArgs = text.split(' ').slice(1).join(' ').trim();
     if (!rawArgs) {
         await sleep(1000);
-        await sock.sendMessage(sender, { text: "❌ Please provide phone number(s)! Example: `.add 2348123456789, 2349012345678`" }, { quoted: m });
+        await sock.sendMessage(sender, { text: "❌ Please provide phone number(s)! Example: `.add 234123456789`" }, { quoted: m });
         return;
     }
 
