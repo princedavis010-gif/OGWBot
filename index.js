@@ -1,3 +1,6 @@
+const { Redis } = require('@upstash/redis');
+const fs = require('fs');
+const path = require('path');
 const handleScr = require('./commands/scr');
 const express = require('express');
 const qrcode = require('qrcode');
@@ -112,66 +115,104 @@ async function isGroupAdmin(sock, groupJid, participantJids) {
     return participant?.admin === 'admin' || participant?.admin === 'superadmin';
 }
 
-// 🧠 Conscious AI Helper Functions
 async function getConsciousAiResponse(jid, userMessage) {
-    if (!chatHistories.has(jid)) {
-        chatHistories.set(jid, []);
-    }
-    
+    if (!chatHistories.has(jid)) chatHistories.set(jid, []);
     const history = chatHistories.get(jid);
-
-    // Push user input into history
-    history.push({
-        role: 'user',
-        parts: [{ text: userMessage }]
-    });
+    history.push({ role: 'user', parts: [{ text: userMessage }] });
 
     try {
         const response = await getAiClient().models.generateContent({
-            model: 'gemini-2.5-flash', // Or your preferred model variant
+            model: 'gemini-2.5-flash',
             contents: history,
             config: {
                 systemInstruction: `You are OG, a street-smart, witty, and friendly AI WhatsApp companion created by Prince Davis. You speak with a cool blend of English and Nigerian Pidgin slang. You are fully conscious of what is happening in this chat, including any commands, trivia games, polls, or tools that were just used. Pick up the conversation naturally based on the latest context.`
             }
         });
-
         const aiReply = response.text;
-
-        // Push model response into history
-        history.push({
-            role: 'model',
-            parts: [{ text: aiReply }]
-        });
-
-        // Trim history if it exceeds the limit
-        if (history.length > MAX_HISTORY_LENGTH) {
-            history.splice(0, history.length - MAX_HISTORY_LENGTH);
-        }
-
+        history.push({ role: 'model', parts: [{ text: aiReply }] });
+        if (history.length > MAX_HISTORY_LENGTH) history.splice(0, history.length - MAX_HISTORY_LENGTH);
         return aiReply;
     } catch (error) {
-        console.error("Conscious AI error:", error);
-        return "Omo, network dey shake small. Try talk to me again later! 😅";
+        console.error('Conscious AI error:', error);
+        return 'Omo, network dey shake small. Try talk to me again later!';
     }
 }
 
 function logBotAction(jid, botMessage) {
-    if (!chatHistories.has(jid)) {
-        chatHistories.set(jid, []);
-    }
-    const history = chatHistories.get(jid);
-    history.push({
+    if (!chatHistories.has(jid)) chatHistories.set(jid, []);
+    chatHistories.get(jid).push({
         role: 'model',
         parts: [{ text: `[System/Bot Action Output]: ${botMessage}` }]
     });
 }
 
-const activeTrivia = new Map(); // Tracks active trivia sessions per group JID
+const activeTrivia = new Map();
+const SESSION_DIR = path.join(__dirname, 'session');
+const LEGACY_SESSION_DIR = path.join(__dirname, 'auth_info');
+const redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN
+});
+
+async function restoreSession() {
+    fs.mkdirSync(SESSION_DIR, { recursive: true });
+
+    const sessionFiles = await redis.get('bot_session');
+    if (sessionFiles && typeof sessionFiles === 'object' && !Array.isArray(sessionFiles)) {
+        for (const [filename, content] of Object.entries(sessionFiles)) {
+            if (path.basename(filename) !== filename) {
+                throw new Error(`Invalid filename in saved WhatsApp session: ${filename}`);
+            }
+            const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+            fs.writeFileSync(path.join(SESSION_DIR, filename), fileContent);
+        }
+        console.log('✅ Restored WhatsApp session from Upstash Redis.');
+        return;
+    }
+
+    if (fs.existsSync(LEGACY_SESSION_DIR)) {
+        const legacyFiles = fs.readdirSync(LEGACY_SESSION_DIR).filter((filename) =>
+            fs.statSync(path.join(LEGACY_SESSION_DIR, filename)).isFile()
+        );
+        if (legacyFiles.length > 0) {
+            for (const filename of legacyFiles) {
+                fs.copyFileSync(path.join(LEGACY_SESSION_DIR, filename), path.join(SESSION_DIR, filename));
+            }
+            console.log('Migrating existing auth_info session to Upstash Redis.');
+            await backupSession();
+            return;
+        }
+    }
+
+    console.log('ℹ️ No saved session in Redis; pair the bot on first startup.');
+}
+
+async function backupSession() {
+    if (!fs.existsSync(SESSION_DIR)) return;
+
+    try {
+        const sessionFiles = {};
+        for (const filename of fs.readdirSync(SESSION_DIR)) {
+            const filePath = path.join(SESSION_DIR, filename);
+            if (fs.statSync(filePath).isFile()) {
+                sessionFiles[filename] = fs.readFileSync(filePath, 'utf8');
+            }
+        }
+
+        if (Object.keys(sessionFiles).length > 0) {
+            await redis.set('bot_session', sessionFiles);
+            console.log('🔄 WhatsApp session backed up to Upstash Redis.');
+        }
+    } catch (error) {
+        console.error('❌ Failed to back up WhatsApp session to Redis:', error);
+    }
+}
 
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
 
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+    await restoreSession();
+    const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
@@ -215,11 +256,15 @@ async function connectToWhatsApp() {
             }
             console.error(`Connection closed (status ${statusCode ?? 'unknown'}): ${lastDisconnect?.error?.message ?? 'unknown error'}`);
             if (shouldReconnect) {
-                connectToWhatsApp();
+                connectToWhatsApp().catch((error) => {
+                    console.error('WhatsApp reconnect failed:', error);
+                    process.exit(1);
+                });
             } else {
                 console.error('WhatsApp logged out. Remove the saved auth_info session and pair the bot again.');
             }
         } else if (connection === 'open') {
+            void backupSession();
             console.log('🤖 Bot successfully connected to WhatsApp!');
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
@@ -249,7 +294,14 @@ sock.ev.on('group-participants.update', async (update) => {
     }
 });
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async () => {
+        try {
+            await saveCreds();
+            await backupSession();
+        } catch (error) {
+            console.error('Failed to save WhatsApp credentials:', error);
+        }
+    });
 
     // Listen for incoming messages
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
@@ -846,7 +898,10 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
     });
 }
 
-connectToWhatsApp(); // <-- Save reference so the web route can access it
+connectToWhatsApp().catch((error) => {
+    console.error('WhatsApp startup failed. Check Upstash Redis configuration and connectivity:', error);
+    process.exit(1);
+});
 
 app.get('/connection-status', (req, res) => {
     res.set('Cache-Control', 'no-store').json(global.whatsappConnection);
