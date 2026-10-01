@@ -29,8 +29,7 @@ async function handleTagAll(sock, m, text, sender, sleep) {
 
             let tagText = `📢 `;
         for (let jid of memberJids) {
-            const phoneNumber = jid.split('@');
-            // [0];
+      //      const phoneNumber = jid.split('@')[0];
        //     tagText += `@${phoneNumber} `;
         }
 
