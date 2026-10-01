@@ -30,6 +30,7 @@ const handleUnlimit = require('./commands/unlimit');
 const { getTargetUser } = require('./utils/targetHelper');
 const { isBlacklisted, checkAndIncrementUsage, blockUser, unblockUser, setUserLimit, removeUserLimit } = require('./utils/userControl');
 const handleMenu = require('./commands/menu');
+const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
 let isPrivate = false;
 const handleTaker = require('./commands/taker');
@@ -599,6 +600,19 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 }
 
         const normalizedText = text.trim().toLowerCase();
+        if (normalizedText === '.status') {
+            await handleStatus({
+                sock,
+                m,
+                sender,
+                senderNumber,
+                botPhoneNumber,
+                ownerNumber: OWNER_NUMBER,
+                connection: global.whatsappConnection
+            });
+            return;
+        }
+
         if (normalizedText === '.activity') {
             if (!isConfiguredOwnerMessage(m, senderNumber)) {
                 await sock.sendMessage(sender, { text: '❌ Only the Owner can request the activity dashboard.' }, { quoted: m });
