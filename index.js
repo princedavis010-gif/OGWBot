@@ -68,7 +68,8 @@ const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService'
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
 let botLid = '';
-let OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
+const ENV_OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
+let OWNER_NUMBER = ENV_OWNER_NUMBER;
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -222,6 +223,11 @@ registerActivityDashboard(app, {
 });
 
 async function restoreOwnerNumber() {
+    if (ENV_OWNER_NUMBER) {
+        OWNER_NUMBER = ENV_OWNER_NUMBER;
+        return;
+    }
+
     const savedOwnerNumber = await redis.get('bot_owner_number');
     if (typeof savedOwnerNumber === 'string' && /^\d{7,15}$/.test(savedOwnerNumber)) {
         OWNER_NUMBER = savedOwnerNumber;
@@ -499,7 +505,13 @@ sock.ev.on('group-participants.update', async (update) => {
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
         if (activityAction) {
             void recordBotActivity(redis, {
-                userNumber: getActivityPhoneNumber({ message: m, senderJid, senderNumber, getSenderNumber }),
+                userNumber: await getActivityPhoneNumber({
+                    message: m,
+                    senderJid,
+                    senderNumber,
+                    getSenderNumber,
+                    resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid)
+                }),
                 chatJid: sender,
                 action: activityAction
             }).catch((error) => {
@@ -1099,8 +1111,11 @@ app.post('/owner-number', async (req, res) => {
     if (separateOwnerNumber && !/^\d{7,15}$/.test(separateOwnerNumber)) {
         return res.status(400).send('Enter a valid owner number with country code.');
     }
+    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
+        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
+    }
 
-    const ownerNumber = separateOwnerNumber || OWNER_NUMBER || getSenderNumber(botJid);
+    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || getSenderNumber(botJid);
     if (!ownerNumber) {
         return res.status(409).send('Pair the bot first or set OWNER_NUMBER in this deployment, then save the owner number.');
     }
@@ -1378,7 +1393,10 @@ app.post('/pair', async (req, res) => {
 
     const botNumber = String(req.body.phone || '').replace(/\D/g, '');
     const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
-    const ownerNumber = separateOwnerNumber || OWNER_NUMBER || botNumber;
+    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
+        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
+    }
+    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || botNumber;
     if (!/^\d{7,15}$/.test(botNumber) || !/^\d{7,15}$/.test(ownerNumber)) {
         return res.status(400).send('Enter valid phone numbers with country codes.');
     }

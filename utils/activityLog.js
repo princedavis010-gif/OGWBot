@@ -17,18 +17,33 @@ function getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber 
     return null;
 }
 
-function getActivityPhoneNumber({ message, senderJid, senderNumber, getSenderNumber }) {
+async function getActivityPhoneNumber({ message, senderJid, senderNumber, getSenderNumber, resolveLid }) {
     if (message.key?.fromMe) {
         return /^\d{7,15}$/.test(senderNumber || '') ? senderNumber : 'unknown';
     }
 
     const isGroup = message.key?.remoteJid?.endsWith('@g.us');
     const alternateJid = isGroup ? message.key?.participantAlt : message.key?.remoteJidAlt;
-    const jid = alternateJid || senderJid;
-    if (!alternateJid && jid?.endsWith('@lid')) return 'unknown';
+    const candidateJids = [alternateJid, senderJid].filter(Boolean);
 
-    const number = getSenderNumber(jid);
-    return /^\d{7,15}$/.test(number) ? number : 'unknown';
+    for (const jid of candidateJids) {
+        if (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@hosted')) {
+            const number = getSenderNumber(jid);
+            if (/^\d{7,15}$/.test(number)) return number;
+        }
+
+        if ((jid.endsWith('@lid') || jid.endsWith('@hosted.lid')) && resolveLid) {
+            try {
+                const phoneJid = await resolveLid(jid);
+                const number = getSenderNumber(phoneJid);
+                if (/^\d{7,15}$/.test(number)) return number;
+            } catch {
+                // Keep trying other JID forms if the local mapping is unavailable.
+            }
+        }
+    }
+
+    return 'unknown';
 }
 
 async function recordBotActivity(redis, { userNumber, chatJid, action }) {
