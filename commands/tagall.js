@@ -29,7 +29,7 @@ async function handleTagAll(sock, m, text, sender, sleep) {
 
             let tagText = `📢 `;
         for (let jid of memberJids) {
-      //      const phoneNumber = jid.split('@')[0];
+            const phoneNumber = jid.split('@')[0];
        //     tagText += `@${phoneNumber} `;
         }
 
@@ -37,7 +37,8 @@ async function handleTagAll(sock, m, text, sender, sleep) {
         await sock.sendMessage(sender, {
             text: tagText,
             mentions: memberJids
-        }, { quoted: m });
+        });
+        // , { quoted: m });
 
     } catch (error) {
         console.error("Error executing tagall:", error);
