@@ -110,11 +110,11 @@ function isValidPairingSetupToken(candidate) {
 
 function ownerNumberSetupMarkup() {
     return `<form action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
-        <label for="ownerNumber">Separate owner number (optional)</label>
-        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" />
-        <label for="setupToken">Deployment setup token</label>
-        <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
-        <button type="submit">Save owner number</button>
+        <label for="ownerNumber" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Separate owner number (optional)</label>
+        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <label for="setupToken" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Deployment setup token</label>
+        <input type="password" id="setupToken" name="setupToken" required autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <button type="submit" style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Save owner number</button>
     </form>`;
 }
 
@@ -170,6 +170,9 @@ function logBotAction(jid, botMessage) {
 const activeTrivia = new Map();
 const SESSION_DIR = path.join(__dirname, 'session');
 const LEGACY_SESSION_DIR = path.join(__dirname, 'auth_info');
+let sessionClearInProgress = false;
+const sessionBackupTasks = new Set();
+const credentialSaveTasks = new Set();
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN
@@ -216,23 +219,32 @@ async function restoreSession() {
 }
 
 async function backupSession() {
-    if (!fs.existsSync(SESSION_DIR)) return;
+    if (sessionClearInProgress || !fs.existsSync(SESSION_DIR)) return;
 
-    try {
-        const sessionFiles = {};
-        for (const filename of fs.readdirSync(SESSION_DIR)) {
-            const filePath = path.join(SESSION_DIR, filename);
-            if (fs.statSync(filePath).isFile()) {
-                sessionFiles[filename] = fs.readFileSync(filePath, 'utf8');
+    const backupTask = (async () => {
+        try {
+            const sessionFiles = {};
+            for (const filename of fs.readdirSync(SESSION_DIR)) {
+                const filePath = path.join(SESSION_DIR, filename);
+                if (fs.statSync(filePath).isFile()) {
+                    sessionFiles[filename] = fs.readFileSync(filePath, 'utf8');
+                }
             }
-        }
 
-        if (Object.keys(sessionFiles).length > 0) {
-            await redis.set('bot_session', sessionFiles);
-            console.log('🔄 WhatsApp session backed up to Upstash Redis.');
+            if (!sessionClearInProgress && Object.keys(sessionFiles).length > 0) {
+                await redis.set('bot_session', sessionFiles);
+                console.log('🔄 WhatsApp session backed up to Upstash Redis.');
+            }
+        } catch (error) {
+            console.error('❌ Failed to back up WhatsApp session to Redis:', error);
         }
-    } catch (error) {
-        console.error('❌ Failed to back up WhatsApp session to Redis:', error);
+    })();
+
+    sessionBackupTasks.add(backupTask);
+    try {
+        await backupTask;
+    } finally {
+        sessionBackupTasks.delete(backupTask);
     }
 }
 
@@ -333,11 +345,19 @@ sock.ev.on('group-participants.update', async (update) => {
 });
 
     sock.ev.on('creds.update', async () => {
-        try {
+        if (sessionClearInProgress) return;
+        const credentialSaveTask = (async () => {
+            if (sessionClearInProgress) return;
             await saveCreds();
             await backupSession();
+        })();
+        credentialSaveTasks.add(credentialSaveTask);
+        try {
+            await credentialSaveTask;
         } catch (error) {
             console.error('Failed to save WhatsApp credentials:', error);
+        } finally {
+            credentialSaveTasks.delete(credentialSaveTask);
         }
     });
 
@@ -450,6 +470,44 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 		const contextInfo = getContextInfo();
 
         const normalizedText = text.trim().toLowerCase();
+        if (normalizedText === '.logout' || normalizedText === '.clearsession') {
+            if (senderNumber !== OWNER_NUMBER && !m.key.fromMe) {
+                await sock.sendMessage(sender, { text: '❌ Only the bot owner can clear the WhatsApp session.' }, { quoted: m });
+                return;
+            }
+
+            sessionClearInProgress = true;
+            try {
+                await Promise.allSettled([...sessionBackupTasks]);
+                await Promise.allSettled([...credentialSaveTasks]);
+                await Promise.allSettled([...sessionBackupTasks]);
+                await redis.del('bot_session', 'bot_creds');
+                fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+                fs.rmSync(LEGACY_SESSION_DIR, { recursive: true, force: true });
+
+                try {
+                    await sock.sendMessage(sender, {
+                        text: '✅ Cloud and local session data cleared. Revoking WhatsApp session and restarting now.'
+                    }, { quoted: m });
+                } catch (sendError) {
+                    console.error('Could not send logout confirmation:', sendError);
+                }
+
+                const logoutRequest = sock.logout().catch((logoutError) => {
+                    console.error('WhatsApp session revocation failed:', logoutError);
+                });
+                setTimeout(() => process.exit(0), 2000);
+                await logoutRequest;
+            } catch (error) {
+                sessionClearInProgress = false;
+                console.error('Failed to clear WhatsApp session:', error);
+                await sock.sendMessage(sender, {
+                    text: '❌ Session could not be fully cleared. Check the server logs before retrying.'
+                }, { quoted: m });
+            }
+            return;
+        }
+
         if (normalizedText === '.admin' || normalizedText === '.group') {
             if (senderNumber !== OWNER_NUMBER) {
                 await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access mode.' }, { quoted: m });
@@ -1192,20 +1250,66 @@ app.post('/pair', async (req, res) => {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
                 <title>OG CORE - Pairing Code</title>
                 <style>
-                    body { font-family: sans-serif; text-align: center; padding: 50px 20px; background: #0f172a; color: white; }
-                    .container { max-width: 420px; margin: 0 auto; padding: 30px; background: #1e293b; border-radius: 8px; }
-                    .code { font: bold 38px monospace; letter-spacing: 4px; color: #25D366; margin: 20px 0; }
+                    body {
+                        font-family: Arial, sans-serif;
+                        text-align: center;
+                        padding: 50px 20px;
+                        color: yellowgreen;
+                        background-attachment: fixed;
+                        background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                        margin: 0;
+                    }
+                    h2 {
+                        color: rgb(221, 187, 15);
+                        text-shadow: black 1px 1px;
+                        font-family: "Rubik Wet Paint", system-ui;
+                        font-size: 28px;
+                        margin-bottom: 15px;
+                    }
+                    p {
+                        color: rgb(19, 221, 150);
+                        font-size: 14px;
+                        margin: 10px 0;
+                        font-family: "Kavoon", system-ui;
+                        text-align: left;
+                    }
+                    .container {
+                        max-width: 420px;
+                        margin: 0 auto;
+                        padding: 30px;
+                        background: rgba(30, 27, 75, 0.4);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.1);
+                    }
+                    .code-display {
+                        font-size: 38px;
+                        font-weight: bold;
+                        letter-spacing: 4px;
+                        background: #0f172a;
+                        display: inline-block;
+                        padding: 15px 20px;
+                        border-radius: 10px;
+                        color: rgb(221, 187, 15);
+                        margin: 15px 0;
+                        border: 1px dashed rgb(19, 221, 150);
+                        font-family: monospace;
+                    }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h2>OG CORE</h2>
                     ${connectionStatusMarkup()}
-                    <h3>Your Pairing Code</h3>
-                    <div class="code">${code?.match(/.{1,4}/g)?.join('-') || code}</div>
-                    <p>Link the bot number in WhatsApp: Linked Devices &gt; Link a Device &gt; Link with phone number instead.</p>
+                    <h3 style="color: rgb(221, 187, 15); font-family: 'Kavoon'; margin-bottom: 5px;">Your Pairing Code:</h3>
+                    <div class="code-display">${code?.match(/.{1,4}/g)?.join('-') || code}</div>
+                    <p>1. Open WhatsApp on your phone.</p>
+                    <p>2. Go to <b>Linked Devices</b> &gt; <b>Link a Device</b> &gt; <b>Link with phone number instead</b>.</p>
+                    <p>3. Type this code in!</p>
                     <p>Owner controls are assigned to the configured owner number.</p>
                 </div>
             </body>
@@ -1268,7 +1372,16 @@ app.get('/pair', async (req, res) => {
                         border-radius: 12px;
                         border: 1px solid rgba(255,255,255,0.1);
                     }
-                    input[type="text"] {
+                    label {
+                        display: block;
+                        color: rgb(19, 221, 150);
+                        font-family: "Kavoon", system-ui;
+                        text-align: left;
+                        margin: 12px 0 6px;
+                    }
+                    input[type="text"],
+                    input[type="tel"],
+                    input[type="password"] {
                         padding: 12px;
                         font-size: 16px;
                         width: 100%;
@@ -1281,7 +1394,9 @@ app.get('/pair', async (req, res) => {
                         text-align: center;
                         margin-bottom: 15px;
                     }
-                    input[type="text"]:focus {
+                    input[type="text"]:focus,
+                    input[type="tel"]:focus,
+                    input[type="password"]:focus {
                         border-color: rgb(221, 187, 15);
                     }
                     button[type="submit"] {
@@ -1309,12 +1424,12 @@ app.get('/pair', async (req, res) => {
                         <label for="phone">Bot WhatsApp number</label>
                         <input type="tel" id="phone" name="phone" placeholder="e.g. 2348123456789" required autocomplete="tel" />
                         <label for="ownerNumber">Owner number (optional)</label>
-                        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to bot number" autocomplete="tel" />
+                        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or bot number" autocomplete="tel" />
                         <label for="setupToken">Deployment setup token</label>
                         <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
                         <button type="submit">Get Code</button>
                     </form>
-                    <p>Use country codes without a plus sign. Leave owner number blank to use the bot number for owner controls.</p>
+                    <p>Use country codes without a plus sign. Leave owner number blank to use OWNER_NUMBER; if unset, the paired bot number is used.</p>
                 </div>
             </body>
             </html>
