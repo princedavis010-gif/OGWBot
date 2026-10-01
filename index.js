@@ -148,6 +148,32 @@ function getSenderNumber(jid) {
     return jid ? jid.split('@')[0].split(':')[0] : '';
 }
 
+const activityGroupMetadataCache = new Map();
+
+async function getGroupParticipantPhoneNumber(sock, groupJid, participantJids) {
+    const now = Date.now();
+    let cached = activityGroupMetadataCache.get(groupJid);
+    if (!cached || cached.expiresAt <= now) {
+        const metadata = await sock.groupMetadata(groupJid);
+        cached = { expiresAt: now + 5 * 60 * 1000, participants: metadata.participants || [] };
+        activityGroupMetadataCache.set(groupJid, cached);
+        if (activityGroupMetadataCache.size > 100) {
+            activityGroupMetadataCache.delete(activityGroupMetadataCache.keys().next().value);
+        }
+    }
+
+    const normalizedJids = new Set(participantJids.map((jid) => jid?.replace(/:\d+(?=@)/, '')).filter(Boolean));
+    const participant = cached.participants.find((entry) =>
+        [entry.id, entry.lid, entry.phoneNumber]
+            .filter(Boolean)
+            .some((jid) => normalizedJids.has(jid.replace(/:\d+(?=@)/, '')))
+    );
+    if (!participant) return null;
+
+    return participant.phoneNumber || [participant.id, participant.lid]
+        .find((jid) => jid && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@hosted')));
+}
+
 function isConfiguredOwnerMessage(message) {
     if (message.key?.fromMe) return true;
     if (!OWNER_NUMBER) return false;
@@ -219,7 +245,8 @@ const redis = new Redis({
 registerActivityDashboard(app, {
     redis,
     password: ACTIVITY_DASHBOARD_PASSWORD,
-    getConnectionStatus: () => global.whatsappConnection
+    getConnectionStatus: () => global.whatsappConnection,
+    resolveLid: (lid) => global.activeSock?.signalRepository?.lidMapping?.getPNForLID(lid)
 });
 
 async function restoreOwnerNumber() {
@@ -504,14 +531,17 @@ sock.ev.on('group-participants.update', async (update) => {
 
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
         if (activityAction) {
+            const activityIdentity = await getActivityPhoneNumber({
+                message: m,
+                senderJid,
+                senderNumber,
+                getSenderNumber,
+                resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid),
+                resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
+            });
             void recordBotActivity(redis, {
-                userNumber: await getActivityPhoneNumber({
-                    message: m,
-                    senderJid,
-                    senderNumber,
-                    getSenderNumber,
-                    resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid)
-                }),
+                userNumber: activityIdentity.phoneNumber,
+                userLid: activityIdentity.userLid,
                 chatJid: sender,
                 action: activityAction
             }).catch((error) => {

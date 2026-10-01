@@ -2,6 +2,7 @@ const { createHmac, timingSafeEqual } = require('crypto');
 
 const SESSION_COOKIE = 'og_activity_session';
 const SESSION_DURATION_MS = 30 * 60 * 1000;
+const lidLookupCache = new Map();
 
 function signSession(password, expiresAt) {
     return createHmac('sha256', password).update(expiresAt).digest('hex');
@@ -140,7 +141,7 @@ function dashboardPage() {
     </script></body></html>`;
 }
 
-function registerActivityDashboard(app, { redis, password, getConnectionStatus, getOwnerNumber, getBotNumbers }) {
+function registerActivityDashboard(app, { redis, password, getConnectionStatus, resolveLid }) {
     const isEnabled = password.length >= 32;
     const isAuthenticated = (req) => isEnabled && hasValidSession(req, password);
 
@@ -185,10 +186,46 @@ function registerActivityDashboard(app, { redis, password, getConnectionStatus, 
                 if (typeof event !== 'string') return event;
                 try { return JSON.parse(event); } catch { return null; }
             }).filter(Boolean);
+            const eventLids = events.map((event) => {
+                if (event.userLid) return event.userLid.replace(/:\d+(?=@)/, '');
+                return /^\d{7,15}$/.test(String(event.user || '')) ? `${event.user}@lid` : null;
+            });
+            const uniqueLids = [...new Set(eventLids.filter(Boolean))];
+            const mappedPhones = uniqueLids.length
+                ? await redis.mget(...uniqueLids.map((lid) => `bot_activity_lid:${lid}`))
+                : [];
+            const savedMappings = new Map(uniqueLids.map((lid, index) => [lid, mappedPhones[index]]));
+            const visibleEvents = await Promise.all(events.map(async (event, index) => {
+                const lid = eventLids[index];
+                let phoneJid = lid ? savedMappings.get(lid) : null;
+                if (!phoneJid && lid) {
+                    const cached = lidLookupCache.get(lid);
+                    if (cached && cached.expiresAt > Date.now()) {
+                        phoneJid = cached.phoneJid;
+                    } else if (resolveLid) {
+                        try {
+                            phoneJid = await resolveLid(lid);
+                            lidLookupCache.set(lid, { phoneJid, expiresAt: Date.now() + 10 * 60 * 1000 });
+                            const mappedNumber = String(phoneJid || '').split('@')[0].split(':')[0];
+                            if (/^\d{7,15}$/.test(mappedNumber)) {
+                                await redis.set(`bot_activity_lid:${lid}`, mappedNumber);
+                            }
+                        } catch {
+                            lidLookupCache.set(lid, { phoneJid: null, expiresAt: Date.now() + 60 * 1000 });
+                        }
+                    }
+                }
+
+                const mappedNumber = String(phoneJid || '').split('@')[0].split(':')[0];
+                const { userLid, ...visibleEvent } = event;
+                if (/^\d{7,15}$/.test(mappedNumber)) visibleEvent.user = mappedNumber;
+                else if (userLid) visibleEvent.user = 'unknown';
+                return visibleEvent;
+            }));
             res.json({
                 connection: getConnectionStatus(),
                 uptimeSeconds: Math.floor(process.uptime()),
-                events
+                events: visibleEvents
             });
         } catch (error) {
             console.error('Could not load activity feed:', error.message);
