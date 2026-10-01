@@ -33,15 +33,17 @@ async function handleTagAll(sock, m, text, sender, sleep) {
        //     tagText += `@${phoneNumber} `;
         }
 
-        if (customMessage) {
-            let tagText = `${customMessage}`;
-        }
 
         await sleep(1000);
         await sock.sendMessage(sender, {
             text: tagText,
             mentions: memberJids
         });
+
+        if (customMessage) {
+                await sleep(500);
+                await sock.sendMessage(sender, { text: customMessage });
+            }
         // , { quoted: m });
 
     } catch (error) {
