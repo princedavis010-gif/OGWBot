@@ -376,34 +376,26 @@ async function connectToWhatsApp() {
     let messageHandlersReady = false;
     let readyAnnouncementSent = false;
 
-    //
-const announceReady = async () => {
-    if (!connectionIsOpen || !messageHandlersReady || readyAnnouncementSent || !botJid) return;
-    if (global.activeSock !== sock) return;
-
-    readyAnnouncementSent = true;
-    global.whatsappConnection.status = 'connected';
-    global.whatsappConnection.method ||= 'saved session';
-    const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
-    if (!selfChatJid) return;
-
-    // Sleep before sending
-    await sleep(10000);
-
-    try {
-        const sentMessage = await sock.sendMessage(selfChatJid, {
-            text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
-        });
-        
-        if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
-    } catch (error) {
-        console.error('Could not send bot-ready confirmation to self-chat:', error);
-    }
-};
-
-   /* const announceReady = () => {
-        if (!connectionIsOpen || !messageHandlersReady || readyAnnouncementSent || !botJid) return;
+    const announceReady = async () => {
+        if (!connectionIsOpen || readyAnnouncementSent || !botJid) return;
         if (global.activeSock !== sock) return;
+
+        const singleCommandCheck = handleTagAll;
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            if (!connectionIsOpen || readyAnnouncementSent || !botJid || global.activeSock !== sock) return;
+            const commandIsReady = messageHandlersReady && typeof singleCommandCheck === 'function';
+            if (commandIsReady) break;
+            console.log(`⏳ Waiting for a working command handler before ready announcement... (${attempt + 1}/30)`);
+            await sleep(500);
+        }
+
+        if (!messageHandlersReady || typeof handleTagAll !== 'function') {
+            console.warn('⚠️ Ready announcement delayed: the command handler is not ready yet.');
+            return;
+        }
+
+        if (readyAnnouncementSent || global.activeSock !== sock) return;
 
         readyAnnouncementSent = true;
         global.whatsappConnection.status = 'connected';
@@ -411,15 +403,18 @@ const announceReady = async () => {
         const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
         if (!selfChatJid) return;
 
-        sock.sendMessage(selfChatJid, {
-            await sleep(4000);
-            text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
-        }).then((sentMessage) => {
+        await sleep(4000);
+
+        try {
+            const sentMessage = await sock.sendMessage(selfChatJid, {
+                text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
+            });
+
             if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
-        }).catch((error) => {
+        } catch (error) {
             console.error('Could not send bot-ready confirmation to self-chat:', error);
-        });
-    }; */
+        }
+    };
 
     // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
 
