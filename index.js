@@ -991,7 +991,7 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
         // 📢 Tagall / Everyone Command Handler
-if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.everyone')) {
+if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.everyone') || text.trim() === '📢') {
     await handleTagAll(sock, m, text, sender, sleep);
     return;
 }
