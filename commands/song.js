@@ -29,6 +29,34 @@ const fetchBufferWithTimeout = async (url, options = {}, timeoutMs = 45000) => {
     }
 };
 
+const getAudioWithRetry = async (url) => {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        let timeout;
+        try {
+            const result = await Promise.race([
+                yt.ytmp3(url, 128),
+                new Promise((_, reject) => {
+                    timeout = setTimeout(() => reject(new Error('Audio provider timed out')), 45000);
+                })
+            ]);
+
+            if (result?.status && result.download?.status && result.download?.url) {
+                return result;
+            }
+        } catch (error) {
+            console.warn(`Audio provider attempt ${attempt} failed:`, error.message);
+        } finally {
+            clearTimeout(timeout);
+        }
+
+        if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+    }
+
+    throw new Error('The YouTube audio provider is temporarily unavailable.');
+};
+
 module.exports = async function handleSong({ sock, m, sender, text }) {
     const chatId = m.key.remoteJid;
 
@@ -99,23 +127,7 @@ module.exports = async function handleSong({ sock, m, sender, text }) {
             })() 
             : Promise.resolve();
 
-        const scraperPromise = yt.ytmp3(video.url, 128);
-        let scraperTimeout;
-        let res;
-        try {
-            res = await Promise.race([
-                scraperPromise,
-                new Promise((_, reject) => {
-                    scraperTimeout = setTimeout(() => reject(new Error('Scraper timed out. Try again later.')), 45000);
-                })
-            ]);
-        } finally {
-            clearTimeout(scraperTimeout);
-        }
-
-        if (!res.status || !res.download?.url) {
-            throw new Error('Failed to retrieve audio stream from scraper');
-        } 
+        const res = await getAudioWithRetry(video.url);
 
         const downloadUrl = res.download.url;
 
@@ -137,7 +149,10 @@ module.exports = async function handleSong({ sock, m, sender, text }) {
         console.error('Song plugin error:', err.message);
         if (sock.ws?.isOpen) {
             try {
-                await sock.sendMessage(chatId, { text: `❌ Failed: ${err.message}` });
+                const message = err.message.includes('audio provider')
+                    ? '❌ The song download service is temporarily unavailable. Please try again shortly.'
+                    : `❌ Failed: ${err.message}`;
+                await sock.sendMessage(chatId, { text: message });
             } catch (sendError) {
                 console.error('Failed to send song error message:', sendError.message);
             }
