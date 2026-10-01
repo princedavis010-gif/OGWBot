@@ -148,6 +148,7 @@ function getSenderNumber(jid) {
 }
 
 function isConfiguredOwnerMessage(message) {
+    if (message.key?.fromMe) return true;
     if (!OWNER_NUMBER) return false;
     const senderJids = [
         message.key?.participant,
@@ -541,7 +542,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
         const normalizedText = text.trim().toLowerCase();
         if (normalizedText === '.activity') {
             if (!isConfiguredOwnerMessage(m)) {
-                await sock.sendMessage(sender, { text: '❌ Only the configured owner can request the activity dashboard.' }, { quoted: m });
+                await sock.sendMessage(sender, { text: '❌ Only the Owner can request the activity dashboard.' }, { quoted: m });
                 return;
             }
 
