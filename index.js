@@ -1,10 +1,12 @@
 const { Redis } = require('@upstash/redis');
+const { timingSafeEqual } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const handleScr = require('./commands/scr');
 const express = require('express');
 const qrcode = require('qrcode');
 const app = express();
+app.use(express.urlencoded({ extended: false, limit: '8kb' }));
 const PORT = process.env.PORT || 3000;
 global.latestQR = null;
 global.whatsappConnection = { status: 'connecting', method: null };
@@ -63,7 +65,8 @@ const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService'
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
 let botLid = '';
-const OWNER_NUMBER = "34798496137284";
+let OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
+const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
@@ -95,6 +98,24 @@ function connectionStatusMarkup() {
             refreshConnectionStatus();
             setInterval(refreshConnectionStatus, 2000);
         </script>`;
+}
+
+function isValidPairingSetupToken(candidate) {
+    const expectedToken = Buffer.from(PAIRING_SETUP_TOKEN);
+    const submittedToken = Buffer.from(String(candidate || ''));
+    return expectedToken.length >= 32 &&
+        submittedToken.length === expectedToken.length &&
+        timingSafeEqual(submittedToken, expectedToken);
+}
+
+function ownerNumberSetupMarkup() {
+    return `<form action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
+        <label for="ownerNumber">Separate owner number (optional)</label>
+        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" />
+        <label for="setupToken">Deployment setup token</label>
+        <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
+        <button type="submit">Save owner number</button>
+    </form>`;
 }
 
 function getSenderNumber(jid) {
@@ -154,6 +175,13 @@ const redis = new Redis({
     token: process.env.UPSTASH_REDIS_REST_TOKEN
 });
 
+async function restoreOwnerNumber() {
+    const savedOwnerNumber = await redis.get('bot_owner_number');
+    if (typeof savedOwnerNumber === 'string' && /^\d{7,15}$/.test(savedOwnerNumber)) {
+        OWNER_NUMBER = savedOwnerNumber;
+    }
+}
+
 async function restoreSession() {
     fs.mkdirSync(SESSION_DIR, { recursive: true });
 
@@ -211,6 +239,7 @@ async function backupSession() {
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
 
+    await restoreOwnerNumber();
     await restoreSession();
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
@@ -269,6 +298,15 @@ async function connectToWhatsApp() {
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
+
+            if (!OWNER_NUMBER) {
+                OWNER_NUMBER = getSenderNumber(botJid);
+                if (OWNER_NUMBER) {
+                    redis.set('bot_owner_number', OWNER_NUMBER).catch((error) => {
+                        console.error('Could not persist the paired bot number as owner:', error);
+                    });
+                }
+            }
 
             const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
             if (selfChatJid) {
@@ -907,6 +945,31 @@ app.get('/connection-status', (req, res) => {
     res.set('Cache-Control', 'no-store').json(global.whatsappConnection);
 });
 
+app.post('/owner-number', async (req, res) => {
+    if (!isValidPairingSetupToken(req.body.setupToken)) {
+        return res.status(403).send('Pairing setup is not authorized. Check this deployment\'s setup token.');
+    }
+
+    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
+    if (separateOwnerNumber && !/^\d{7,15}$/.test(separateOwnerNumber)) {
+        return res.status(400).send('Enter a valid owner number with country code.');
+    }
+
+    const ownerNumber = separateOwnerNumber || OWNER_NUMBER || getSenderNumber(botJid);
+    if (!ownerNumber) {
+        return res.status(409).send('Pair the bot first or set OWNER_NUMBER in this deployment, then save the owner number.');
+    }
+
+    try {
+        await redis.set('bot_owner_number', ownerNumber);
+        OWNER_NUMBER = ownerNumber;
+        res.redirect('/qr');
+    } catch (error) {
+        console.error('Could not save owner number:', error);
+        res.status(500).send('Could not save owner number to this deployment\'s Upstash database.');
+    }
+});
+
 app.get('/', (req, res) => {
     res.send(`
         
@@ -1008,6 +1071,7 @@ app.get('/qr', async (req, res) => {
             <body style="font-family: sans-serif; text-align: center; padding: 50px 20px; background: #0f172a; color: white;">
                 <h2>OG CORE - WhatsApp Connection</h2>
                 ${connectionStatusMarkup()}
+                ${ownerNumberSetupMarkup()}
                 <a href="/qr" style="color: #25D366;">Refresh QR</a> | <a href="/pair" style="color: #25D366;">Use pairing code</a>
             </body>
             </html>`);
@@ -1076,6 +1140,7 @@ app.get('/qr', async (req, res) => {
             <div class="container">
                 <h2>OG CORE - QR Scan</h2>
                 ${connectionStatusMarkup()}
+                ${ownerNumberSetupMarkup()}
                 <br>
                 <img src="${qrImageURL}" alt="QR Code" />
                 <br>
@@ -1099,8 +1164,65 @@ app.get('/qr', async (req, res) => {
 // --- /pair ROUTE FOR PHONE NUMBER LINKING ---
 global.pairingCode = null;
 
+app.post('/pair', async (req, res) => {
+    if (!isValidPairingSetupToken(req.body.setupToken)) {
+        return res.status(403).send('Pairing setup is not authorized. Check the setup token configured for this deployment.');
+    }
+
+    const botNumber = String(req.body.phone || '').replace(/\D/g, '');
+    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
+    const ownerNumber = separateOwnerNumber || OWNER_NUMBER || botNumber;
+    if (!/^\d{7,15}$/.test(botNumber) || !/^\d{7,15}$/.test(ownerNumber)) {
+        return res.status(400).send('Enter valid phone numbers with country codes.');
+    }
+    if (!global.activeSock) {
+        return res.status(503).send('WhatsApp is still initializing. Refresh and try again shortly.');
+    }
+
+    try {
+        const code = await global.activeSock.requestPairingCode(botNumber);
+        await redis.set('bot_owner_number', ownerNumber);
+        OWNER_NUMBER = ownerNumber;
+        global.whatsappConnection.status = 'awaiting-pairing';
+        global.whatsappConnection.method = 'pairing code';
+
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>OG CORE - Pairing Code</title>
+                <style>
+                    body { font-family: sans-serif; text-align: center; padding: 50px 20px; background: #0f172a; color: white; }
+                    .container { max-width: 420px; margin: 0 auto; padding: 30px; background: #1e293b; border-radius: 8px; }
+                    .code { font: bold 38px monospace; letter-spacing: 4px; color: #25D366; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>OG CORE</h2>
+                    ${connectionStatusMarkup()}
+                    <h3>Your Pairing Code</h3>
+                    <div class="code">${code?.match(/.{1,4}/g)?.join('-') || code}</div>
+                    <p>Link the bot number in WhatsApp: Linked Devices &gt; Link a Device &gt; Link with phone number instead.</p>
+                    <p>Owner controls are assigned to the configured owner number.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error('Pairing setup failed:', error);
+        res.status(500).send('Could not generate the pairing code. Check the server logs and try again.');
+    }
+});
+
 app.get('/pair', async (req, res) => {
     const phoneNumber = req.query.phone;
+
+    if (phoneNumber) {
+        return res.status(405).send('Submit pairing details using the protected pairing form.');
+    }
 
     // 1. If phone number is not provided, show the form
     if (!phoneNumber) {
@@ -1183,11 +1305,16 @@ app.get('/pair', async (req, res) => {
                 <div class="container">
                     <h2>OG CORE</h2>
                     ${connectionStatusMarkup()}
-                    <form action="/pair" method="GET">
-                        <input type="text" name="phone" placeholder="e.g. 2348123456789" required autocomplete="off" />
+                    <form action="/pair" method="POST">
+                        <label for="phone">Bot WhatsApp number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="e.g. 2348123456789" required autocomplete="tel" />
+                        <label for="ownerNumber">Owner number (optional)</label>
+                        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to bot number" autocomplete="tel" />
+                        <label for="setupToken">Deployment setup token</label>
+                        <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
                         <button type="submit">Get Code</button>
                     </form>
-                    <p>Enter your phone number with country code (no + sign).</p>
+                    <p>Use country codes without a plus sign. Leave owner number blank to use the bot number for owner controls.</p>
                 </div>
             </body>
             </html>
