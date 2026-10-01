@@ -1125,12 +1125,66 @@ app.get('/qr', async (req, res) => {
         return res.send(`
             <!DOCTYPE html>
             <html lang="en">
-            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OG CORE - Connection</title></head>
-            <body style="font-family: sans-serif; text-align: center; padding: 50px 20px; background: #0f172a; color: white;">
-                <h2>OG CORE - WhatsApp Connection</h2>
-                ${connectionStatusMarkup()}
-                ${ownerNumberSetupMarkup()}
-                <a href="/qr" style="color: #25D366;">Refresh QR</a> | <a href="/pair" style="color: #25D366;">Use pairing code</a>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+                <title>OG CORE - WhatsApp Connection</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        text-align: center;
+                        padding: 50px 20px;
+                        color: yellowgreen;
+                        background-attachment: fixed;
+                        background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+                        margin: 0;
+                    }
+                    h2 {
+                        color: rgb(221, 187, 15);
+                        text-shadow: black 1px 1px;
+                        font-family: "Rubik Wet Paint", system-ui;
+                        font-size: 32px;
+                        margin-bottom: 20px;
+                    }
+                    p {
+                        color: rgb(19, 221, 150);
+                        margin-top: 15px;
+                        font-family: "Kavoon", system-ui;
+                        font-size: 14px;
+                    }
+                    .container {
+                        max-width: 400px;
+                        margin: 0 auto;
+                        padding: 30px;
+                        background: rgba(30, 27, 75, 0.4);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.1);
+                    }
+                    .btn {
+                        display: block;
+                        margin: 15px 0;
+                        padding: 12px;
+                        border-radius: 8px;
+                        background: #25D366;
+                        color: white;
+                        font-family: "Kavoon", system-ui;
+                        font-weight: bold;
+                        text-decoration: none;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>OG CORE</h2>
+                    ${connectionStatusMarkup()}
+                    ${ownerNumberSetupMarkup()}
+                    <p>QR code is not available yet. Refresh this page or use a pairing code.</p>
+                    <a href="/qr" class="btn">Refresh QR</a>
+                    <a href="/pair" class="btn">Use pairing code</a>
+                </div>
             </body>
             </html>`);
     }
@@ -1162,7 +1216,8 @@ app.get('/qr', async (req, res) => {
                     text-shadow: black 1px 1px;
                     font-family: "Rubik Wet Paint", system-ui;
                     font-weight: 1;
-                    font-size: 38px;
+                    font-size: 32px;
+                    margin-bottom: 20px;
                 }
                 a {
                     font-family: "Kavoon", system-ui;
@@ -1170,27 +1225,34 @@ app.get('/qr', async (req, res) => {
                 }
                 p {
                     color: rgb(19, 221, 150);
+                    margin-top: 15px;
+                    font-family: "Kavoon", system-ui;
+                    font-size: 14px;
                 }
                 .container {
                     max-width: 400px;
                     margin: 0 auto;
+                    padding: 30px;
+                    background: rgba(30, 27, 75, 0.4);
+                    border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.1);
                 }
                 .btn {
                     display: block;
                     margin: 15px 0;
                     padding: 12px;
-                    text-decoration: none;
                     border-radius: 8px;
+                    background: #25D366;
+                    color: white;
+                    font-family: "Kavoon", system-ui;
                     font-weight: bold;
+                    text-decoration: none;
                 }
-                .btn-browser {
-                    background-color: #0088cc;
-                    color: white;
-                }
-                .btn-playstore {
-                    background-color: #24292e;
-                    color: white;
-                    font-size: 15px;
+                .qr-image {
+                    width: min(300px, 100%);
+                    height: auto;
+                    border: 5px solid #25D366;
+                    border-radius: 10px;
                 }
             </style>
         </head>
@@ -1200,10 +1262,10 @@ app.get('/qr', async (req, res) => {
                 ${connectionStatusMarkup()}
                 ${ownerNumberSetupMarkup()}
                 <br>
-                <img src="${qrImageURL}" alt="QR Code" />
+                <img class="qr-image" src="${qrImageURL}" alt="QR Code" />
                 <br>
-                <a href="/qr" class="btn btn-browser">Refresh QR</a>
-                <a href="/" class="btn btn-playstore">Back to Home</a>
+                <a href="/qr" class="btn">Refresh QR</a>
+                <a href="/pair" class="btn">Use pairing code</a>
             </div>
         </body>
         </html>
