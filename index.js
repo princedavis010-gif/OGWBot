@@ -54,6 +54,8 @@ const { handleMute, handleUnmute } = require('./commands/mute');
 const { handleFlirt } = require('./commands/flirt');
 const { handleTruth, handleDare } = require('./commands/truthDare');
 const checkAntiLink = require('./utils/antilink');
+const { getActivityAction, recordBotActivity } = require('./utils/activityLog');
+const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
 const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
@@ -67,6 +69,7 @@ let botJid = '';
 let botLid = '';
 let OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
+const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
@@ -197,6 +200,12 @@ const credentialSaveTasks = new Set();
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN
+});
+
+registerActivityDashboard(app, {
+    redis,
+    password: ACTIVITY_DASHBOARD_PASSWORD,
+    getConnectionStatus: () => global.whatsappConnection
 });
 
 async function restoreOwnerNumber() {
@@ -435,24 +444,6 @@ sock.ev.on('group-participants.update', async (update) => {
             senderNumber = OWNER_NUMBER;
         }
 
-        if (isPrivateForSender(senderJid)) return;
-
-        // 🚫 1. Check if user is completely blacklisted
-        if (isBlacklisted(senderNumber) && senderNumber !== OWNER_NUMBER) {
-            return; // Ignore them completely
-        }
-
-        // ⏳ 2. Check if user exceeded their global usage limit (Owner bypasses)
-        if (senderNumber !== OWNER_NUMBER) {
-            const usageCheck = checkAndIncrementUsage(senderNumber, OWNER_NUMBER);
-            if (!usageCheck.allowed) {
-                await sock.sendMessage(sender, { 
-                    text: `❌ You have exhausted your allowed interaction limit (${usageCheck.current}/${usageCheck.limit}) for this bot.` 
-                }, { quoted: m });
-                return;
-            }
-        }
-
         const userJid = senderJid;
         const senderCleanId = senderNumber;
         const senderName = m.pushName || 'Unknown';
@@ -485,6 +476,38 @@ sock.ev.on('group-participants.update', async (update) => {
 
         if (!text) return; // Ignore messages without text
 
+        const getContextInfo = () => {
+            return msgContent.extendedTextMessage?.contextInfo ||
+                   msgContent.imageMessage?.contextInfo ||
+                   msgContent.videoMessage?.contextInfo || null;
+        };
+        const contextInfo = getContextInfo();
+
+        const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
+        if (activityAction) {
+            void recordBotActivity(redis, {
+                userNumber: senderNumber,
+                chatJid: sender,
+                action: activityAction
+            }).catch((error) => {
+                console.error('Could not record bot activity:', error.message);
+            });
+        }
+
+        if (isPrivateForSender(senderJid)) return;
+
+        if (isBlacklisted(senderNumber) && senderNumber !== OWNER_NUMBER) return;
+
+        if (senderNumber !== OWNER_NUMBER) {
+            const usageCheck = checkAndIncrementUsage(senderNumber, OWNER_NUMBER);
+            if (!usageCheck.allowed) {
+                await sock.sendMessage(sender, {
+                    text: `❌ You have exhausted your allowed interaction limit (${usageCheck.current}/${usageCheck.limit}) for this bot.`
+                }, { quoted: m });
+                return;
+            }
+        }
+
 		const isLinkBlocked = await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid });
 		
 
@@ -502,14 +525,6 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
         console.error("Failed to delete muted user message (Is the bot an admin?):", error);
     }
 }
-
-		const getContextInfo = () => {
-            return msgContent.extendedTextMessage?.contextInfo || 
-                   msgContent.imageMessage?.contextInfo || 
-                   msgContent.videoMessage?.contextInfo || null;
-        };
-
-		const contextInfo = getContextInfo();
 
         const normalizedText = text.trim().toLowerCase();
         if (normalizedText === '.logout' || normalizedText === '.clearsession') {
