@@ -2,7 +2,7 @@
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = async function checkAntiLink({ sock, m, sender, text, senderNumber, senderJid }) {
-   /* // Only apply anti-link in group chats
+    // Only apply anti-link in group chats
     if (!sender.endsWith('@g.us')) return false;
 
     // Regex to catch standard URLs, WhatsApp invite links, and common domains
@@ -23,6 +23,6 @@ module.exports = async function checkAntiLink({ sock, m, sender, text, senderNum
         } catch (err) {
             console.error("Anti-link execution error (Ensure bot is admin):", err);
         }
-    } */
+    } 
     return false;
 };

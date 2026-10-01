@@ -371,6 +371,28 @@ async function connectToWhatsApp() {
         auth: state
     });
     global.activeSock = sock;
+    let connectionIsOpen = false;
+    let messageHandlersReady = false;
+    let readyAnnouncementSent = false;
+
+    const announceReady = () => {
+        if (!connectionIsOpen || !messageHandlersReady || readyAnnouncementSent || !botJid) return;
+        if (global.activeSock !== sock) return;
+
+        readyAnnouncementSent = true;
+        global.whatsappConnection.status = 'connected';
+        global.whatsappConnection.method ||= 'saved session';
+        const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
+        if (!selfChatJid) return;
+
+        sock.sendMessage(selfChatJid, {
+            text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
+        }).then((sentMessage) => {
+            if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
+        }).catch((error) => {
+            console.error('Could not send bot-ready confirmation to self-chat:', error);
+        });
+    };
 
     // 👈 ADD THIS LINE HERE so the web server can talk to your bot:
 
@@ -394,9 +416,8 @@ async function connectToWhatsApp() {
 
     if (connection === 'open') {
         global.latestQR = null; // Clears it once you scan successfully
-        global.whatsappConnection.status = 'connected';
+        global.whatsappConnection.status = 'connecting';
         global.whatsappConnection.method ||= 'saved session';
-        console.log('✅ OGWBot connected successfully to WhatsApp!');
     }
 
         if (connection === 'close') {
@@ -438,7 +459,7 @@ async function connectToWhatsApp() {
             }
         } else if (connection === 'open') {
             void backupSession();
-            console.log('🤖 Bot successfully connected to WhatsApp!');
+            connectionIsOpen = true;
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
             let botPhoneJid = botJid;
@@ -461,16 +482,7 @@ async function connectToWhatsApp() {
                 }
             }
 
-            const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
-            if (selfChatJid) {
-                sock.sendMessage(selfChatJid, {
-                    text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method}.`
-                }).then((sentMessage) => {
-                    if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
-                }).catch((error) => {
-                    console.error('Could not send connection confirmation to bot self-chat:', error);
-                });
-            }
+            announceReady();
         }
     });
 
@@ -919,14 +931,15 @@ if (text.toLowerCase().startsWith('.tts')) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
-            await sleep(1500);
-            await sock.sendMessage(sender, { text: "🔄 Restarting bot system... Back online in a few seconds!" }, { quoted: m });
-            
-            console.log("⚠️ Bot restart triggered via command.");
-            
-            setTimeout(() => {
-                process.exit(0);
-            }, 1000);
+            await sock.sendMessage(sender, {
+                text: '🔄 Restarting the WhatsApp connection now. I will confirm when commands are ready.'
+            }, { quoted: m });
+
+            console.log('Restart requested by owner; reconnecting the WhatsApp socket.');
+            global.whatsappConnection.status = 'restarting';
+            void sock.end(new Error('WhatsApp restart requested by owner')).catch((error) => {
+                console.error('Could not close the WhatsApp socket for restart:', error);
+            });
             return;
         }
 
@@ -1181,6 +1194,9 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
         }
     }
     });
+
+    messageHandlersReady = true;
+    announceReady();
 }
 
 connectToWhatsApp().catch((error) => {
