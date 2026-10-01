@@ -174,9 +174,10 @@ async function getGroupParticipantPhoneNumber(sock, groupJid, participantJids) {
         .find((jid) => jid && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@hosted')));
 }
 
-function isConfiguredOwnerMessage(message) {
+function isConfiguredOwnerMessage(message, resolvedSenderNumber) {
     if (message.key?.fromMe) return true;
     if (!OWNER_NUMBER) return false;
+    if (resolvedSenderNumber === OWNER_NUMBER) return true;
     const senderJids = [
         message.key?.participant,
         message.key?.participantAlt,
@@ -483,12 +484,15 @@ sock.ev.on('group-participants.update', async (update) => {
 
         const sender = m.key.remoteJid;
         const senderJid = m.key.participant || sender;
-        
-        // 🔑 THE FIX: Calculate senderNumber, but force it to OWNER_NUMBER if you typed it from the burner phone
-        let senderNumber = getSenderNumber(senderJid);
-        if (m.key.fromMe) {
-            senderNumber = OWNER_NUMBER;
-        }
+        const senderIdentity = await getActivityPhoneNumber({
+            message: m,
+            senderJid,
+            senderNumber: m.key.fromMe ? getSenderNumber(sock.user?.id || botJid) : '',
+            getSenderNumber,
+            resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid),
+            resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
+        });
+        const senderNumber = senderIdentity.phoneNumber;
 
         const userJid = senderJid;
         const senderCleanId = senderNumber;
