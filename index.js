@@ -388,7 +388,7 @@ const announceReady = async () => {
     if (!selfChatJid) return;
 
     // Sleep before sending
-    await sleep(4000);
+    await sleep(10000);
 
     try {
         const sentMessage = await sock.sendMessage(selfChatJid, {
