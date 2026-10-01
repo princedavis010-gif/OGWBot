@@ -56,6 +56,7 @@ const { handleFlirt } = require('./commands/flirt');
 const { handleTruth, handleDare } = require('./commands/truthDare');
 const checkAntiLink = require('./utils/antilink');
 const { getActivityAction, getActivityPhoneNumber, recordBotActivity } = require('./utils/activityLog');
+const { matchesOwnerNumber } = require('./utils/ownerAccess');
 const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
 const handleImagine = require('./commands/imagine');
@@ -68,7 +69,9 @@ const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService'
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
 let botLid = '';
-const OWNER_NUMBER = '34798496137284';
+let botPhoneNumber = '';
+const ENV_OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
+let OWNER_NUMBER = ENV_OWNER_NUMBER;
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -113,11 +116,42 @@ function isValidPairingSetupToken(candidate) {
 }
 
 function ownerNumberSetupMarkup() {
-    return '<p>Owner access is fixed in this deployment.</p>';
+    const isConfigured = /^\d{7,15}$/.test(OWNER_NUMBER) && PAIRING_SETUP_TOKEN.length >= 32;
+    const maskedOwnerNumber = isConfigured ? '*'.repeat(OWNER_NUMBER.length) : '';
+    const maskedSetupToken = isConfigured ? '*'.repeat(PAIRING_SETUP_TOKEN.length) : '';
+
+    return `<form id="owner-setup-form" action="/owner-number" method="POST" style="max-width: 420px; margin: 24px auto; text-align: left;">
+        <label for="ownerNumber" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Separate owner number (optional)</label>
+        <input type="${isConfigured ? 'password' : 'tel'}" id="ownerNumber" name="ownerNumber" value="${maskedOwnerNumber}" placeholder="Defaults to OWNER_NUMBER or paired bot number" autocomplete="tel" ${isConfigured ? 'readonly' : ''} style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <label for="setupToken" style="display: block; color: rgb(19, 221, 150); font-family: Kavoon, system-ui; margin: 12px 0 6px;">Deployment setup token</label>
+        <input type="password" id="setupToken" name="setupToken" value="${maskedSetupToken}" ${isConfigured ? 'readonly' : 'required'} autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #475569; border-radius: 8px; background: #1e293b; color: #fff; text-align: center; margin-bottom: 15px;" />
+        <button type="button" id="edit-owner-setup" ${isConfigured ? '' : 'hidden'} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Edit</button>
+        <button type="submit" id="save-owner-setup" ${isConfigured ? 'hidden' : ''} style="padding: 12px 20px; background: #25D366; color: white; border: 0; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-family: Kavoon, system-ui;">Save owner number</button>
+    </form>
+    ${isConfigured ? `<script>
+        document.getElementById('edit-owner-setup').addEventListener('click', () => {
+            const ownerInput = document.getElementById('ownerNumber');
+            const tokenInput = document.getElementById('setupToken');
+            ownerInput.value = '';
+            tokenInput.value = '';
+            ownerInput.type = 'tel';
+            tokenInput.type = 'password';
+            ownerInput.readOnly = false;
+            tokenInput.readOnly = false;
+            tokenInput.required = true;
+            document.getElementById('edit-owner-setup').hidden = true;
+            document.getElementById('save-owner-setup').hidden = false;
+            ownerInput.focus();
+        });
+    </script>` : ''}`;
 }
 
 function getSenderNumber(jid) {
     return jid ? jid.split('@')[0].split(':')[0] : '';
+}
+
+function isOwnerSenderNumber(senderNumber) {
+    return matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber);
 }
 
 const activityGroupMetadataCache = new Map();
@@ -148,19 +182,18 @@ async function getGroupParticipantPhoneNumber(sock, groupJid, participantJids) {
 
 function isConfiguredOwnerMessage(message, resolvedSenderNumber) {
     if (message.key?.fromMe) return true;
-    if (!OWNER_NUMBER) return false;
-    if (resolvedSenderNumber === OWNER_NUMBER) return true;
+    if (isOwnerSenderNumber(resolvedSenderNumber)) return true;
     const senderJids = [
         message.key?.participant,
         message.key?.participantAlt,
         message.key?.remoteJid,
         message.key?.remoteJidAlt
     ];
-    return senderJids.some((jid) => getSenderNumber(jid) === OWNER_NUMBER);
+    return senderJids.some((jid) => isOwnerSenderNumber(getSenderNumber(jid)));
 }
 
 function isPrivateForSender(jid, resolvedSenderNumber) {
-    return isPrivate && resolvedSenderNumber !== OWNER_NUMBER && getSenderNumber(jid) !== OWNER_NUMBER;
+    return isPrivate && !isOwnerSenderNumber(resolvedSenderNumber) && !isOwnerSenderNumber(getSenderNumber(jid));
 }
 
 async function isGroupAdmin(sock, groupJid, participantJids) {
@@ -221,6 +254,18 @@ registerActivityDashboard(app, {
     getConnectionStatus: () => global.whatsappConnection,
     resolveLid: (lid) => global.activeSock?.signalRepository?.lidMapping?.getPNForLID(lid)
 });
+
+async function restoreOwnerNumber() {
+    if (ENV_OWNER_NUMBER) {
+        OWNER_NUMBER = ENV_OWNER_NUMBER;
+        return;
+    }
+
+    const savedOwnerNumber = await redis.get('bot_owner_number');
+    if (typeof savedOwnerNumber === 'string' && /^\d{7,15}$/.test(savedOwnerNumber)) {
+        OWNER_NUMBER = savedOwnerNumber;
+    }
+}
 
 async function restoreSession() {
     fs.mkdirSync(SESSION_DIR, { recursive: true });
@@ -288,6 +333,7 @@ async function backupSession() {
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
 
+    await restoreOwnerNumber();
     await restoreSession();
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
@@ -366,7 +412,24 @@ async function connectToWhatsApp() {
             console.log('🤖 Bot successfully connected to WhatsApp!');
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
+            let botPhoneJid = botJid;
+            if (!botPhoneJid.endsWith('@s.whatsapp.net') && !botPhoneJid.endsWith('@hosted')) {
+                try {
+                    botPhoneJid = await sock.signalRepository.lidMapping.getPNForLID(botJid);
+                } catch {
+                    botPhoneJid = '';
+                }
+            }
+            const connectedPhoneNumber = getSenderNumber(botPhoneJid);
+            botPhoneNumber = /^\d{7,15}$/.test(connectedPhoneNumber) ? connectedPhoneNumber : '';
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
+
+            if (!OWNER_NUMBER && botPhoneNumber) {
+                OWNER_NUMBER = botPhoneNumber;
+                redis.set('bot_owner_number', OWNER_NUMBER).catch((error) => {
+                    console.error('Could not persist the paired bot number as owner:', error);
+                });
+            }
 
             const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
             if (selfChatJid) {
@@ -437,7 +500,7 @@ sock.ev.on('group-participants.update', async (update) => {
         const senderIdentity = await getActivityPhoneNumber({
             message: m,
             senderJid,
-            senderNumber: m.key.fromMe ? getSenderNumber(sock.user?.id || botJid) : '',
+            senderNumber: m.key.fromMe ? botPhoneNumber : '',
             getSenderNumber,
             resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid),
             resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
@@ -505,9 +568,9 @@ sock.ev.on('group-participants.update', async (update) => {
 
         if (isPrivateForSender(senderJid, senderNumber)) return;
 
-        if (isBlacklisted(senderNumber) && senderNumber !== OWNER_NUMBER) return;
+        if (isBlacklisted(senderNumber) && !isOwnerSenderNumber(senderNumber)) return;
 
-        if (senderNumber !== OWNER_NUMBER) {
+        if (!isOwnerSenderNumber(senderNumber)) {
             const usageCheck = checkAndIncrementUsage(senderNumber, OWNER_NUMBER);
             if (!usageCheck.allowed) {
                 await sock.sendMessage(sender, {
@@ -554,7 +617,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
         }
 
         if (normalizedText === '.logout' || normalizedText === '.clearsession') {
-            if (senderNumber !== OWNER_NUMBER && !m.key.fromMe) {
+            if (!isOwnerSenderNumber(senderNumber) && !m.key.fromMe) {
                 await sock.sendMessage(sender, { text: '❌ Only the bot owner can clear the WhatsApp session.' }, { quoted: m });
                 return;
             }
@@ -592,7 +655,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
         }
 
         if (normalizedText === '.admin' || normalizedText === '.group') {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access mode.' }, { quoted: m });
                 return;
             }
@@ -613,7 +676,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         const accessChange = parseAccessChange(text);
         if (accessChange) {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: '❌ Only the bot owner can change command access.' }, { quoted: m });
                 return;
             }
@@ -635,12 +698,12 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         const commandName = resolveCommandName(text);
         if (commandName) {
-            if (isSelfOnly(commandName) && senderNumber !== OWNER_NUMBER) {
+            if (isSelfOnly(commandName) && !isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: '🔒 This command is reserved for the bot owner.' }, { quoted: m });
                 return;
             }
 
-            if (getCommandAccessMode() === 'admin' && senderNumber !== OWNER_NUMBER) {
+            if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
                 let senderIsAdmin = false;
                 try {
                     senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
@@ -718,7 +781,7 @@ if (text.toLowerCase().startsWith('.demote')) {
 
 // 📊 .unlimit / .removelimit Command Handler
 if (text.toLowerCase().startsWith('.unlimit') || text.toLowerCase().startsWith('.removelimit')) {
-    await handleUnlimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo });
+    await handleUnlimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
@@ -741,17 +804,17 @@ if (text.toLowerCase().startsWith('.unlock')) {
 
 // 🚫 .block (Reply to user or tag them)
         if (text.toLowerCase().startsWith('.block')) {
-    await handleBlock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo });
+    await handleBlock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
 if (text.toLowerCase().startsWith('.unblock')) {
-    await handleUnblock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo });
+    await handleUnblock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
 if (text.toLowerCase().startsWith('.limit')) {
-    await handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo });
+    await handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
@@ -769,12 +832,12 @@ if (text.toLowerCase() === '.trivia') {
 }
 
 if (text.toLowerCase() === '.welcome on') {
-    await handleWelcomeOn({ sock, m, sender, senderNumber, OWNER_NUMBER, sleep });
+    await handleWelcomeOn({ sock, m, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep });
     return;
 }
 
 if (text.toLowerCase() === '.welcome off') {
-    await handleWelcomeOff({ sock, m, sender, senderNumber, OWNER_NUMBER, sleep });
+    await handleWelcomeOff({ sock, m, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep });
     return;
 }
 
@@ -786,7 +849,7 @@ if (text.toLowerCase().startsWith('.tts')) {
 
         // Private Mode Switch
         if (text.toLowerCase() === '.private') {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
@@ -798,7 +861,7 @@ if (text.toLowerCase().startsWith('.tts')) {
 
         // Public Mode Switch
         if (text.toLowerCase() === '.public') {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
@@ -809,7 +872,7 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
 	if (text.toLowerCase() === '.restart') {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
@@ -825,7 +888,7 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
 	if (text.toLowerCase() === '.kill') {
-            if (senderNumber !== OWNER_NUMBER) {
+            if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
@@ -878,12 +941,12 @@ if (cleanText === '.flirt' || cleanText.startsWith('.flirt ') ||
 // 💬 Quote Toggle Commands (.quoteon / .quoteoff)
 if (text.toLowerCase() === '.life' || text.toLowerCase() === '.death') {
 
- if (senderNumber !== OWNER_NUMBER) {
+ if (!isOwnerSenderNumber(senderNumber)) {
                 await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
                 return;
             }
 
-    await handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NUMBER, sleep });
+    await handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep });
     return;
 }
 
@@ -989,7 +1052,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
         const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('hey og');
 
         if (isAiTriggered) {
-            if (getCommandAccessMode() === 'admin' && senderNumber !== OWNER_NUMBER) {
+            if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
                 let senderIsAdmin = false;
                 try {
                     senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
@@ -1091,15 +1154,27 @@ app.post('/owner-number', async (req, res) => {
         return res.status(403).send('Pairing setup is not authorized. Check this deployment\'s setup token.');
     }
 
-    const requestedOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
-    if (requestedOwnerNumber && !/^\d{7,15}$/.test(requestedOwnerNumber)) {
+    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
+    if (separateOwnerNumber && !/^\d{7,15}$/.test(separateOwnerNumber)) {
         return res.status(400).send('Enter a valid owner number with country code.');
     }
-    if (requestedOwnerNumber && requestedOwnerNumber !== OWNER_NUMBER) {
-        return res.status(409).send('OWNER_NUMBER is fixed in this deployment and cannot be changed here.');
+    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
+        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
     }
 
-    res.redirect('/qr');
+    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || getSenderNumber(botJid);
+    if (!ownerNumber) {
+        return res.status(409).send('Pair the bot first or set OWNER_NUMBER in this deployment, then save the owner number.');
+    }
+
+    try {
+        await redis.set('bot_owner_number', ownerNumber);
+        OWNER_NUMBER = ownerNumber;
+        res.redirect('/qr');
+    } catch (error) {
+        console.error('Could not save owner number:', error);
+        res.status(500).send('Could not save owner number to this deployment\'s Upstash database.');
+    }
 });
 
 app.get('/', (req, res) => {
@@ -1364,8 +1439,13 @@ app.post('/pair', async (req, res) => {
     }
 
     const botNumber = String(req.body.phone || '').replace(/\D/g, '');
-    if (!/^\d{7,15}$/.test(botNumber)) {
-        return res.status(400).send('Enter a valid bot phone number with country code.');
+    const separateOwnerNumber = String(req.body.ownerNumber || '').replace(/\D/g, '');
+    if (ENV_OWNER_NUMBER && separateOwnerNumber && separateOwnerNumber !== ENV_OWNER_NUMBER) {
+        return res.status(409).send('OWNER_NUMBER in this Render deployment is authoritative. Update it in Render to change the owner.');
+    }
+    const ownerNumber = ENV_OWNER_NUMBER || separateOwnerNumber || OWNER_NUMBER || botNumber;
+    if (!/^\d{7,15}$/.test(botNumber) || !/^\d{7,15}$/.test(ownerNumber)) {
+        return res.status(400).send('Enter valid phone numbers with country codes.');
     }
     if (!global.activeSock) {
         return res.status(503).send('WhatsApp is still initializing. Refresh and try again shortly.');
@@ -1373,6 +1453,8 @@ app.post('/pair', async (req, res) => {
 
     try {
         const code = await global.activeSock.requestPairingCode(botNumber);
+        await redis.set('bot_owner_number', ownerNumber);
+        OWNER_NUMBER = ownerNumber;
         global.whatsappConnection.status = 'awaiting-pairing';
         global.whatsappConnection.method = 'pairing code';
 
@@ -1556,11 +1638,13 @@ app.get('/pair', async (req, res) => {
                     <form action="/pair" method="POST">
                         <label for="phone">Bot WhatsApp number</label>
                         <input type="tel" id="phone" name="phone" placeholder="e.g. 2348123456789" required autocomplete="tel" />
+                        <label for="ownerNumber">Owner number (optional)</label>
+                        <input type="tel" id="ownerNumber" name="ownerNumber" placeholder="Defaults to OWNER_NUMBER or bot number" autocomplete="tel" />
                         <label for="setupToken">Deployment setup token</label>
                         <input type="password" id="setupToken" name="setupToken" required autocomplete="off" />
                         <button type="submit">Get Code</button>
                     </form>
-                    <p>Use the bot account’s phone number with country code. Owner access remains fixed in this deployment.</p>
+                    <p>Use country codes without a plus sign. Leave owner number blank to use OWNER_NUMBER; if unset, the paired bot number is used.</p>
                 </div>
             </body>
             </html>

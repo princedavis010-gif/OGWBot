@@ -1,10 +1,12 @@
+const { matchesOwnerNumber } = require('../utils/ownerAccess');
+
 let quoteReplyAiEnabled = true; // Enabled by default
 
-async function handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NUMBER, sleep }) {
+async function handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep }) {
     const cleanText = text.toLowerCase().trim();
 
     if (cleanText === '.life') {
-        if (senderNumber !== OWNER_NUMBER) {
+        if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
             await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
             return true;
         }
@@ -15,7 +17,7 @@ async function handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NU
     }
 
     if (cleanText === '.death') {
-        if (senderNumber !== OWNER_NUMBER) {
+        if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
             await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
             return;
         }

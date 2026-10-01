@@ -1,7 +1,8 @@
 const { disableWelcome } = require('../utils/welcomeControl');
+const { matchesOwnerNumber } = require('../utils/ownerAccess');
 
-async function handleWelcomeOff({ sock, m, sender, senderNumber, OWNER_NUMBER, sleep }) {
-    if (senderNumber !== OWNER_NUMBER) {
+async function handleWelcomeOff({ sock, m, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep }) {
+    if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
         await sleep(500);
         await sock.sendMessage(sender, { text: `❌ Access Denied!` });
         return;

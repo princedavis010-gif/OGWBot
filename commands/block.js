@@ -1,8 +1,9 @@
 const { getTargetUser } = require('../utils/targetHelper');
 const { blockUser } = require('../utils/userControl');
+const { matchesOwnerNumber } = require('../utils/ownerAccess');
 
-async function handleBlock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo }) {
-    if (senderNumber !== OWNER_NUMBER) {
+async function handleBlock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo }) {
+    if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
         await sleep(500);
         await sock.sendMessage(sender, { text: `❌ Access Denied!` });
         return;

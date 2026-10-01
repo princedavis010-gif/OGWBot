@@ -1,8 +1,10 @@
 const { getTargetUser } = require('../utils/targetHelper');
 const { setUserLimit } = require('../utils/userControl');
 
-async function handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, sleep, getContextInfo }) {
-    if (senderNumber !== OWNER_NUMBER) {
+const { matchesOwnerNumber } = require('../utils/ownerAccess');
+
+async function handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo }) {
+    if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
         await sleep(500);
         await sock.sendMessage(sender, { text: `❌ Access Denied!` });
         return;
