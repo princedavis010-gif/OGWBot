@@ -17,9 +17,12 @@ function getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber 
     return null;
 }
 
-async function getActivityPhoneNumber({ message, senderJid, senderNumber, getSenderNumber, resolveLid }) {
+async function getActivityPhoneNumber({ message, senderJid, senderNumber, getSenderNumber, resolveLid, resolveGroupPhone }) {
     if (message.key?.fromMe) {
-        return /^\d{7,15}$/.test(senderNumber || '') ? senderNumber : 'unknown';
+        return {
+            phoneNumber: /^\d{7,15}$/.test(senderNumber || '') ? senderNumber : 'unknown',
+            userLid: ''
+        };
     }
 
     const isGroup = message.key?.remoteJid?.endsWith('@g.us');
@@ -29,21 +32,39 @@ async function getActivityPhoneNumber({ message, senderJid, senderNumber, getSen
     for (const jid of candidateJids) {
         if (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@hosted')) {
             const number = getSenderNumber(jid);
-            if (/^\d{7,15}$/.test(number)) return number;
+            if (/^\d{7,15}$/.test(number)) return { phoneNumber: number, userLid: '' };
         }
 
         if ((jid.endsWith('@lid') || jid.endsWith('@hosted.lid')) && resolveLid) {
             try {
                 const phoneJid = await resolveLid(jid);
                 const number = getSenderNumber(phoneJid);
-                if (/^\d{7,15}$/.test(number)) return number;
+                if (/^\d{7,15}$/.test(number)) return { phoneNumber: number, userLid: jid };
             } catch {
                 // Keep trying other JID forms if the local mapping is unavailable.
             }
         }
     }
 
-    return 'unknown';
+    if (resolveGroupPhone) {
+        try {
+            const phoneJid = await resolveGroupPhone(candidateJids);
+            const number = getSenderNumber(phoneJid);
+            if (/^\d{7,15}$/.test(number)) {
+                return {
+                    phoneNumber: number,
+                    userLid: candidateJids.find((jid) => jid.endsWith('@lid') || jid.endsWith('@hosted.lid')) || ''
+                };
+            }
+        } catch {
+            // Group metadata may be unavailable; preserve the unknown fallback.
+        }
+    }
+
+    return {
+        phoneNumber: 'unknown',
+        userLid: candidateJids.find((jid) => jid.endsWith('@lid') || jid.endsWith('@hosted.lid')) || ''
+    };
 }
 
 async function recordBotActivity(redis, { userNumber, chatJid, action }) {
