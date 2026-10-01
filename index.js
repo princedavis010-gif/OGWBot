@@ -403,8 +403,6 @@ async function connectToWhatsApp() {
         const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
         if (!selfChatJid) return;
 
-        await sleep(4000);
-
         try {
             const sentMessage = await sock.sendMessage(selfChatJid, {
                 text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`

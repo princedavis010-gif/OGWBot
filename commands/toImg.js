@@ -40,15 +40,31 @@ async function handleToImg({ sock, m, sender, sleep, getContextInfo }) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // Sharp automatically handles webp buffers and outputs a crisp PNG image
+        const isAnimatedSticker = Boolean(stickerMessage.isAnimated) || /video|gif/i.test(String(stickerMessage.mimetype || ''));
+
+        if (isAnimatedSticker) {
+            const animatedBuffer = await sharp(buffer, { animated: true })
+                .gif({ loop: 0, delay: 100 })
+                .toBuffer();
+
+            await sleep(2000);
+            await sock.sendMessage(sender, {
+                video: animatedBuffer,
+                mimetype: 'video/gif',
+                gifPlayback: true,
+                caption: '🎬 Here is your video'
+            }, { quoted: m });
+            return;
+        }
+
+        // Sharp automatically handles static webp buffers and outputs a crisp PNG image
         const imageBuffer = await sharp(buffer)
             .png()
             .toBuffer();
 
         await sleep(2000);
-        await sock.sendMessage(sender, { 
-            image: imageBuffer, 
-          //  caption: "✨ Here is your image!" 
+        await sock.sendMessage(sender, {
+            image: imageBuffer
         }, { quoted: m });
 
     } catch (error) {
