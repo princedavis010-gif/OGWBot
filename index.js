@@ -4,6 +4,7 @@ const qrcode = require('qrcode');
 const app = express();
 const PORT = process.env.PORT || 3000;
 global.latestQR = null;
+global.whatsappConnection = { status: 'connecting', method: null };
 require('dotenv').config();
 const {
     getMode: getCommandAccessMode,
@@ -65,6 +66,33 @@ const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 // const qrcode = require('qrcode-terminal');
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function connectionStatusMarkup() {
+    return `<p id="connection-status" role="status">Checking WhatsApp connection...</p>
+        <script>
+            async function refreshConnectionStatus() {
+                try {
+                    const response = await fetch('/connection-status', { cache: 'no-store' });
+                    const status = await response.json();
+                    const element = document.getElementById('connection-status');
+                    if (status.status === 'connected') {
+                        element.textContent = '✅ WhatsApp connected successfully' + (status.method ? ' via ' + status.method : '') + '.';
+                        element.style.color = '#25D366';
+                    } else if (status.status === 'disconnected') {
+                        element.textContent = 'WhatsApp disconnected. Reconnecting...';
+                        element.style.color = '#ffb84d';
+                    } else {
+                        element.textContent = 'Waiting for WhatsApp connection' + (status.method ? ' via ' + status.method : '') + '...';
+                        element.style.color = '#f0d56b';
+                    }
+                } catch (error) {
+                    document.getElementById('connection-status').textContent = 'Unable to check WhatsApp connection.';
+                }
+            }
+            refreshConnectionStatus();
+            setInterval(refreshConnectionStatus, 2000);
+        </script>`;
+}
 
 function getSenderNumber(jid) {
     return jid ? jid.split('@')[0].split(':')[0] : '';
@@ -166,17 +194,22 @@ async function connectToWhatsApp() {
 
             if (qr) {
         global.latestQR = qr;
+        if (!global.whatsappConnection.method) global.whatsappConnection.method = 'QR code';
+        global.whatsappConnection.status = 'awaiting-pairing';
         console.log('📸 QR code received from WhatsApp and saved to global variable!');
     }
 
     if (connection === 'open') {
         global.latestQR = null; // Clears it once you scan successfully
+        global.whatsappConnection.status = 'connected';
+        global.whatsappConnection.method ||= 'saved session';
         console.log('✅ OGWBot connected successfully to WhatsApp!');
     }
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            global.whatsappConnection.status = 'disconnected';
             if (global.activeSock === sock) {
                 global.activeSock = null;
             }
@@ -191,6 +224,17 @@ async function connectToWhatsApp() {
             botJid = sock.user?.id || '';
             botLid = sock.user?.lid || '';
             console.log(`📌 Saved Bot JID: ${botJid} | LID: ${botLid}`);
+
+            const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
+            if (selfChatJid) {
+                sock.sendMessage(selfChatJid, {
+                    text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method}.`
+                }).then((sentMessage) => {
+                    if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
+                }).catch((error) => {
+                    console.error('Could not send connection confirmation to bot self-chat:', error);
+                });
+            }
         }
     });
 
@@ -804,6 +848,10 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
 connectToWhatsApp(); // <-- Save reference so the web route can access it
 
+app.get('/connection-status', (req, res) => {
+    res.set('Cache-Control', 'no-store').json(global.whatsappConnection);
+});
+
 app.get('/', (req, res) => {
     res.send(`
         
@@ -874,6 +922,7 @@ app.get('/', (req, res) => {
 
     <div class="container">
         <h2>OG CORE</h2>
+                ${connectionStatusMarkup()}
       <!--  <p>If the app did not open, CapCut might not be installed on your device.</p> -->
         <br>
         
@@ -898,8 +947,15 @@ app.get('/', (req, res) => {
 app.get('/qr', async (req, res) => {
     if (!global.latestQR) {
         return res.send(`
-            
-            <h2>No QR code available yet or bot is already connected! Check your logs.</h2>`);
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OG CORE - Connection</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px 20px; background: #0f172a; color: white;">
+                <h2>OG CORE - WhatsApp Connection</h2>
+                ${connectionStatusMarkup()}
+                <a href="/qr" style="color: #25D366;">Refresh QR</a> | <a href="/pair" style="color: #25D366;">Use pairing code</a>
+            </body>
+            </html>`);
     }
     try {
         const qrImageURL = await qrcode.toDataURL(global.latestQR);
@@ -964,6 +1020,7 @@ app.get('/qr', async (req, res) => {
         <body>
             <div class="container">
                 <h2>OG CORE - QR Scan</h2>
+                ${connectionStatusMarkup()}
                 <br>
                 <img src="${qrImageURL}" alt="QR Code" />
                 <br>
@@ -1070,6 +1127,7 @@ app.get('/pair', async (req, res) => {
             <body>
                 <div class="container">
                     <h2>OG CORE</h2>
+                    ${connectionStatusMarkup()}
                     <form action="/pair" method="GET">
                         <input type="text" name="phone" placeholder="e.g. 2348123456789" required autocomplete="off" />
                         <button type="submit">Get Code</button>
@@ -1109,6 +1167,8 @@ app.get('/pair', async (req, res) => {
     // 3. Request pairing code and display result
     try {
         const cleanedPhone = phoneNumber.replace(/[^0-9]/g, '');
+        global.whatsappConnection.status = 'awaiting-pairing';
+        global.whatsappConnection.method = 'pairing code';
         const code = await global.activeSock.requestPairingCode(cleanedPhone);
         
         res.send(`
@@ -1171,6 +1231,7 @@ app.get('/pair', async (req, res) => {
             <body>
                 <div class="container">
                     <h2>OG CORE</h2>
+                    ${connectionStatusMarkup()}
                     <h3 style="color: rgb(221, 187, 15); font-family: 'Kavoon'; margin-bottom: 5px;">Your Pairing Code:</h3>
                     <div class="code-display">
                         ${code?.match(/.{1,4}/g)?.join('-') || code}

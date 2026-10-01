@@ -1,7 +1,6 @@
 async function handleMenu({ sock, m, sender, sleep }) {
     const menuText = `╭━━『 ♡ 𝓞𝓖 𝓒𝓞𝓡𝓔 ♡ 』━━╮
 
-⚡ Prefix: .
 📦 Total Commands: 37
 👑 Owner: Prince Davis
 🤖 BOT: https://og-core.onrender.com
