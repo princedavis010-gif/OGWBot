@@ -259,6 +259,11 @@ registerActivityDashboard(app, {
 async function restoreOwnerNumber() {
     if (ENV_OWNER_NUMBER) {
         OWNER_NUMBER = ENV_OWNER_NUMBER;
+        try {
+            await redis.set('bot_owner_number', OWNER_NUMBER);
+        } catch (error) {
+            console.error('Could not persist configured owner number to Redis:', error);
+        }
         return;
     }
 
@@ -427,9 +432,11 @@ async function connectToWhatsApp() {
 
             if (!OWNER_NUMBER && botPhoneNumber) {
                 OWNER_NUMBER = botPhoneNumber;
-                redis.set('bot_owner_number', OWNER_NUMBER).catch((error) => {
+                try {
+                    await redis.set('bot_owner_number', OWNER_NUMBER);
+                } catch (error) {
                     console.error('Could not persist the paired bot number as owner:', error);
-                });
+                }
             }
 
             const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
