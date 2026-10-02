@@ -33,12 +33,13 @@ async function handlePromote(sock, m, text, sender, sleep) {
             text:
             
             `*『 GROUP PROMOTION 』*\n\n` +
-            `👥 *Promoted User${participants.length > 1 ? 's' : ''}:*\n` +
-            `${promotedUsernames.map(name => `• ${name}`).join('\n')}\n\n`
+            `👑 *Congratulations @${targetJid.split('@')[0]}!*\n\n` +
+            `You have been promoted to admin in 𝓣𝓗𝓔 𝓔𝓛𝓘𝓣𝓔 𝓗𝓤𝓑! 🎉\n\n` +
+            `Please use your powers responsibly. 🌚` +
+            `> 𝓞𝓖 𝓒𝓞𝓡𝓔`,
 
-            // `Congratulations @${targetJid.split('@')[0]} 🎉 , you're now an admin!`, 
             mentions: [targetJid] 
-        }, { quoted: m });
+        });
     } catch (error) {
         console.error("Promote error:", error);
         await sock.sendMessage(sender, { text: "Make me admin fess!" }, { quoted: m });
