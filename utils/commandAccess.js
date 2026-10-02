@@ -4,7 +4,7 @@ const path = require('path');
 const commandNames = new Set([
     'add', 'admin', 'alive', 'antilink', 'antiviewonce', 'block', 'chat', 'death', 'demote',
     'dare', 'everyone', 'flirt', 'flirty', 'group', 'h', 'imagine', 'kick',
-    'life', 'limit', 'list', 'lock', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
+    'insult', 'life', 'limit', 'list', 'lock', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
     'poll', 'promote', 'public', 'private', 'quote', 'rbg', 'removelimit',
     'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg',
     'trivia', 'tts', 'unblock', 'unlimit', 'unlock', 'unmute', 'vibe', 'welcome',

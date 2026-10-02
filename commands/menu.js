@@ -18,27 +18,27 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .unlock
 │ ➜ .mute 
 │ ➜ .unmute
-│ ➜ .tagall / 📢
+│ ➜ .tagall
 │ ➜ .tts
-│ ➜ .poll Question?, Option 1, Option 2
+│ ➜ .poll
 │ ➜ .welcome
 
 
 ┏━━━━━━━━━━━━━━━━━
 ┃ 🎨 MEDIA & VOICE
 ┗━━━━━━━━━━━━━━━━━
-│ ➜ .s (create sticker)
-│ ➜ .scr (square-crop sticker; Owner/Bot)
+│ ➜ .s
+│ ➜ .scr
 │ ➜ .toimg
 │ ➜ .rbg
-│ ➜ .vibe / play me ...
+│ ➜ .vibe
 
 
 ┏━━━━━━━━━━━━━━━━━
 ┃ 🤖 AI
 ┗━━━━━━━━━━━━━━━━━
-│ ➜ Hey OG ...
-│ ➜ $img ... / .imagine ... / Gen ...
+│ ➜ OG
+│ ➜ $img
 
 
 ┏━━━━━━━━━━━━━━━━━
@@ -48,6 +48,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ t (truth)
 │ ➜ d (dare)
 │ ➜ .flirt
+│ ➜ .insult
 
 ┏━━━━━━━━━━━━━━━━━
 ┃ 📋 MENU & HELP

@@ -65,6 +65,7 @@ const handleAlive = require('./commands/alive');
 const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
 const handleMyLove = require('./commands/mylove');
+const handleInsult = require('./commands/insult');
 const chatHistories = new Map(); // Key: JID, Value: Array of message turns
 const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and tokens
 const aiMessageKeys = new Set();
@@ -1291,6 +1292,15 @@ if (text.toLowerCase().startsWith('.add') || text.toLowerCase().startsWith('.add
 
 if (text.toLowerCase().startsWith('.mylove')) {
     await handleMyLove({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo });
+    return;
+}
+
+if (/^\.insult(?:\s|$)/i.test(text.trim())) {
+    if (hasProtectedTarget({ contextInfo, text })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot insult the owner 😝' }, { quoted: m });
+        return;
+    }
+    await handleInsult({ sock, m, sender, text, sleep, getContextInfo });
     return;
 }
 
