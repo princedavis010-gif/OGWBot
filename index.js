@@ -1172,7 +1172,7 @@ if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.
         await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for tagall.' }, { quoted: m });
         return;
     }
-    const rateLimit = canUseCommand({ command: 'tagall', userId: senderJid, groupId: sender, cooldownMs: 2 * 60 * 1000 });
+    const rateLimit = canUseCommand({ command: 'tagall', userId: senderJid, groupId: sender, cooldownMs: 0 * 60 * 1000 });
     if (!rateLimit.allowed) {
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using tagall again.` }, { quoted: m });
         return;
