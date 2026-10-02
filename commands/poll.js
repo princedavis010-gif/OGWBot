@@ -39,7 +39,7 @@ async function handlePollCommand({ sock, m, text, sender, sleep }) {
                 values: pollOptions,
                 selectableCount: 1 // Set to 1 for single-choice voting
             }
-        }, { quoted: m });
+        });
     } catch (error) {
         console.error("Poll error:", error);
         await sock.sendMessage(sender, { text: "❌ Failed to create the poll." }, { quoted: m });
