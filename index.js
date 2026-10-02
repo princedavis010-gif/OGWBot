@@ -185,7 +185,6 @@ function hasProtectedTarget({ contextInfo, text, fallbackJid }) {
     }
 
     if (contextInfo?.participant) jids.push(contextInfo.participant);
-    if (fallbackJid) jids.push(fallbackJid);
 
     for (const jid of jids) {
         if (isProtectedTargetJid(jid)) return true;
@@ -409,7 +408,6 @@ async function backupSession() {
         sessionBackupTasks.delete(backupTask);
     }
 }
-
 async function connectToWhatsApp() {
     console.log("🚀 Initializing Baileys connection handler..."); // <-- Add this right here
 
@@ -938,6 +936,14 @@ if (text.toLowerCase().startsWith('.demote')) {
 
 // 📊 .unlimit / .removelimit Command Handler
 if (text.toLowerCase().startsWith('.unlimit') || text.toLowerCase().startsWith('.removelimit')) {
+    if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
+        return;
+    }
     await handleUnlimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
@@ -1018,6 +1024,10 @@ if (text.toLowerCase().startsWith('.unblock')) {
 if (text.toLowerCase().startsWith('.limit')) {
     if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
         await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .limit.' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
         return;
     }
     await handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
