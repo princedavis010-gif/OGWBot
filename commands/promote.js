@@ -32,11 +32,11 @@ async function handlePromote(sock, m, text, sender, sleep) {
         await sock.sendMessage(sender, { 
             text:
 
-            `                     *『 GROUP PROMOTION 』*
-👑 *Congratulations @${targetJid.split('@')[0]}!*
-You have been promoted to admin in 𝓣𝓗𝓔 𝓔𝓛𝓘𝓣𝓔 𝓗𝓤𝓑! 🎉
-Please use your powers responsibly. 🌚
-> 𝓞𝓖 𝓒𝓞𝓡𝓔`,
+            `                     *『 GROUP PROMOTION 』*\n
+👑 *_Congratulations @${targetJid.split('@')[0]}!_*\n
+You have been promoted to admin in 𝓣𝓗𝓔 𝓔𝓛𝓘𝓣𝓔 𝓗𝓤𝓑! 🎉\n
+Please use your powers responsibly. 🌚\n
+> *𝓞𝓖 𝓒𝓞𝓡𝓔*`,
             
             // `Congratulations @${targetJid.split('@')[0]} 🎉 , you're now an admin!`, 
             mentions: [targetJid] 
