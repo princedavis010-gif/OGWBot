@@ -827,7 +827,8 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
                 return;
             }
 
-            if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
+            const staysPublicInAdminMode = ['taker', 'sticker', 'toimg'].includes(commandName);
+            if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber) && !staysPublicInAdminMode) {
                 let senderIsAdmin = false;
                 try {
                     senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
