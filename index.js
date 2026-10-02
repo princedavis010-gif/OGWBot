@@ -836,7 +836,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
                 if (!senderIsAdmin) {
                     await sock.sendMessage(sender, {
-                        text: '🔒 Admin mode is enabled. Only group admins can use bot commands.'
+                        text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳'
                     }, { quoted: m });
                     return;
                 }
