@@ -1304,6 +1304,7 @@ if (text.toLowerCase().startsWith('.mylove')) {
                 await sock.sendMessage(sender, { text: '❌ You cannot mute the owner.' }, { quoted: m });
                 return;
             }
+			await handleMute({ sock, m, sender, text, sleep, senderJid });
 			return;
 		}
 
