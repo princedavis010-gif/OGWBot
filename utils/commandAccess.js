@@ -6,7 +6,7 @@ const commandNames = new Set([
     'dare', 'everyone', 'flirt', 'flirty', 'group', 'h', 'imagine', 'kick',
     'insult', 'life', 'limit', 'list', 'lock', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
     'poll', 'promote', 'public', 'private', 'quote', 'rbg', 'removelimit',
-    'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg',
+    'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg', 'tovid',
     'trivia', 'tts', 'unblock', 'unlimit', 'unlock', 'unmute', 'vibe', 'welcome',
     'everyone', 'song', 'taker', 'sticker', 'truth', 'flog', 'kill'
 ]);

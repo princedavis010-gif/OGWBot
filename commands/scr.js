@@ -1,11 +1,12 @@
 const sharp = require('sharp');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const addExifToWebp = require('../utils/stickerExif');
 
 module.exports = {
     name: 'scr',
     description: 'Crops an image to 1:1 square aspect ratio and converts it into a WhatsApp sticker',
 
-    async handle(sock, m, { from, quoted }) {
+    async handle(sock, m, { from, quoted, text = '' }) {
         try {
             const msgContent = m.message?.ephemeralMessage?.message ||
                 m.message?.viewOnceMessage?.message ||
@@ -55,8 +56,11 @@ module.exports = {
                 })
                 .webp({ quality: 80 })
                 .toBuffer();
+            const args = text ? text.trim().split(/ +/).slice(1) : [];
+            const packName = args.length > 0 ? args.join(' ') : 'Prince Davis';
+            const stickerWithExif = addExifToWebp(croppedBuffer, packName, '');
 
-            await sock.sendMessage(from, { sticker: croppedBuffer }, { quoted: m });
+            await sock.sendMessage(from, { sticker: stickerWithExif }, { quoted: m });
 
         } catch (err) {
             console.error('Scr command error:', err);

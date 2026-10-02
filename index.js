@@ -47,6 +47,7 @@ const handlePromote = require('./commands/promote'); // Adjust path if needed
 const handleTagAll = require('./commands/tagall'); // Adjust path if it's in a folder
 const handleAdd = require('./commands/add');
 const handleToImg = require('./commands/toImg');
+const handleToVid = require('./commands/tovid');
 const handleWelcome = require('./commands/welcome');
 const handleRemoveBg = require('./commands/handleRemoveBg');
 const handleTrivia = require('./commands/trivia');
@@ -826,7 +827,7 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
                 return;
             }
 
-            const staysPublicInAdminMode = ['taker', 'sticker', 'toimg'].includes(commandName);
+            const staysPublicInAdminMode = ['taker', 'sticker', 'toimg', 'tovid'].includes(commandName);
             if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber) && !staysPublicInAdminMode) {
                 let senderIsAdmin = false;
                 try {
@@ -977,7 +978,7 @@ if (text.toLowerCase().startsWith('.scr')) {
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .scr again.` }, { quoted: m });
         return;
     }
-    await handleScr.handle(sock, m, { from: sender, quoted: contextInfo?.quotedMessage });
+    await handleScr.handle(sock, m, { from: sender, quoted: contextInfo?.quotedMessage, text });
     return;
 }
 
@@ -1269,6 +1270,20 @@ if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text
         return;
     }
     await handleToImg({ sock, m, sender, sleep, getContextInfo });
+    return;
+}
+
+if (text.toLowerCase() === '.tovid') {
+    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .tovid again.` }, { quoted: m });
+        return;
+    }
+    await handleToVid({ sock, m, sender, sleep, getContextInfo });
     return;
 }
 

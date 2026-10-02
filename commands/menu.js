@@ -30,6 +30,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .s
 │ ➜ .scr
 │ ➜ .toimg
+│ ➜ .tovid
 │ ➜ .rbg
 │ ➜ .vibe
 
