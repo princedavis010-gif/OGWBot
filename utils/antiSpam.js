@@ -24,7 +24,7 @@ function canUseCommand({ command, userId, groupId, cooldownMs }) {
 
     const now = Date.now();
     const lastUsed = cooldowns.get(key) || 0;
-    const effectiveCooldown = Number(cooldownMs) || 30000;
+    const effectiveCooldown = Number(cooldownMs) || 2000;
     const remaining = lastUsed ? effectiveCooldown - (now - lastUsed) : 0;
 
     if (lastUsed && remaining > 0) {
