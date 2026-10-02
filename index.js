@@ -1025,12 +1025,22 @@ if (text.toLowerCase().startsWith('.limit')) {
 }
 
 		// 📊 .poll Command (Create interactive WhatsApp polls)
-		if (text.toLowerCase().startsWith('.poll')) {
+		if (/^\.poll(?:\s|$)/i.test(text.trim())) {
     if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
         await sock.sendMessage(sender, { text: '❌ Only group admins can use .poll.' }, { quoted: m });
         return;
     }
-    await handlePollCommand({ sock, m, text, sender, sleep });
+    const pollCommands = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (pollCommands.some((line) => !/^\.poll(?:\s|$)/i.test(line))) {
+        await sock.sendMessage(sender, {
+            text: '❌ Put each poll on its own line, and start every line with .poll.'
+        }, { quoted: m });
+        return;
+    }
+
+    for (const pollCommand of pollCommands) {
+        await handlePollCommand({ sock, m, text: pollCommand, sender, sleep });
+    }
     return;
 }
 
