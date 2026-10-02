@@ -30,7 +30,13 @@ async function handlePromote(sock, m, text, sender, sleep) {
         await sleep(1000);
         await sock.groupParticipantsUpdate(sender, [targetJid], 'promote');
         await sock.sendMessage(sender, { 
-            text: `Congratulations @${targetJid.split('@')[0]} 🎉 , you're now an admin!`, 
+            text:
+            
+            `*『 GROUP PROMOTION 』*\n\n` +
+            `👥 *Promoted User${participants.length > 1 ? 's' : ''}:*\n` +
+            `${promotedUsernames.map(name => `• ${name}`).join('\n')}\n\n`
+
+            // `Congratulations @${targetJid.split('@')[0]} 🎉 , you're now an admin!`, 
             mentions: [targetJid] 
         }, { quoted: m });
     } catch (error) {
