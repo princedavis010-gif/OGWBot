@@ -1,6 +1,6 @@
 module.exports = async function handleFlog({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo }) {
     // 🎯 Default hardcoded target person
-    let targetNumber = '2348124451937';
+   // let targetNumber = '2348124451937';
 
     /* 
     // 💡 MENTION REQUIREMENT (Uncomment below if you want to use mentions instead)
@@ -19,7 +19,7 @@ module.exports = async function handleFlog({ sock, m, sender, senderNumber, send
 
     await sleep(2000);
     await sock.sendMessage(sender, {
-        text: `Hey @${targetNumber}, fun fact.`,
+        text: `*Welcome to the chat @${targetNumber}.*`,
         mentions: [senderJid, targetJid]
     });
 };

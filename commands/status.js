@@ -9,7 +9,7 @@ module.exports = async function handleStatus({
 }) {
     if (!botPhoneNumber || senderNumber !== botPhoneNumber) {
         await sock.sendMessage(sender, {
-            text: '🔒 Only the connected bot number can use .status.'
+            text: '🔒 Only the owner can use .status.'
         }, { quoted: m });
         return false;
     }

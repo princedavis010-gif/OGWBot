@@ -30,6 +30,7 @@ const handleUnlimit = require('./commands/unlimit');
 const { getTargetUser } = require('./utils/targetHelper');
 const { isBlacklisted, checkAndIncrementUsage, blockUser, unblockUser, setUserLimit, removeUserLimit } = require('./utils/userControl');
 const { enableAntiLink, disableAntiLink, isAntiLinkEnabled } = require('./utils/antiLinkControl');
+const { isGroupAllowed, canUseCommand, formatCooldownMessage } = require('./utils/antiSpam');
 const handleMenu = require('./commands/menu');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
@@ -155,6 +156,55 @@ function getSenderNumber(jid) {
 
 function isOwnerSenderNumber(senderNumber) {
     return matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber);
+}
+
+function normalizePhoneNumber(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function isOwnerOrBotNumber(candidate) {
+    const cleanCandidate = normalizePhoneNumber(candidate);
+    const protectedNumbers = new Set([
+        normalizePhoneNumber(OWNER_NUMBER),
+        normalizePhoneNumber(botPhoneNumber),
+        normalizePhoneNumber(getSenderNumber(botJid))
+    ].filter(Boolean));
+
+    return Boolean(cleanCandidate) && protectedNumbers.has(cleanCandidate);
+}
+
+function isProtectedTargetJid(jid) {
+    return isOwnerOrBotNumber(getSenderNumber(jid));
+}
+
+function hasProtectedTarget({ contextInfo, text, fallbackJid }) {
+    const jids = [];
+
+    if (Array.isArray(contextInfo?.mentionedJid)) {
+        jids.push(...contextInfo.mentionedJid);
+    }
+
+    if (contextInfo?.participant) jids.push(contextInfo.participant);
+    if (fallbackJid) jids.push(fallbackJid);
+
+    for (const jid of jids) {
+        if (isProtectedTargetJid(jid)) return true;
+    }
+
+    const directNumberMatches = String(text || '').match(/@?(\d{7,15})/g) || [];
+    for (const match of directNumberMatches) {
+        if (isOwnerOrBotNumber(match)) return true;
+    }
+
+    return false;
+}
+
+async function isAdminActionAllowed(sock, sender, senderNumber, senderJid, m) {
+    if (isOwnerSenderNumber(senderNumber) || isOwnerOrBotNumber(senderNumber)) return true;
+    if (!sender.endsWith('@g.us')) return true;
+
+    const senderIsAdmin = await isGroupAdmin(sock, sender, [senderJid, m.key.participantAlt].filter(Boolean));
+    return senderIsAdmin;
 }
 
 const activityGroupMetadataCache = new Map();
@@ -801,6 +851,10 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         // Turn Terminal Logs OFF
         if (text.toLowerCase() === '.off') {
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+                return;
+            }
             showTerminalLogs = false;
             await sleep(1000);
             await sock.sendMessage(sender, { text: 'Terminal Disabled' });
@@ -809,6 +863,10 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
 
         // Turn Terminal Logs ON
         if (text.toLowerCase() === '.on') {
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+                return;
+            }
             showTerminalLogs = true;
             await sleep(1000);
             await sock.sendMessage(sender, { text: 'Terminal Enabled' });
@@ -837,18 +895,42 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
             // 👢 .kick Command (Group Admin Only)
         // 🥾 Kick Command Handler
 if (text.toLowerCase().startsWith('.kick')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot kick the owner.' }, { quoted: m });
+        return;
+    }
     await handleKick(sock, m, text, sender, sleep);
     return;
 }
 
         // 👑 Promote Command Handler
 if (text.toLowerCase().startsWith('.promote')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: 'The owner? 😒 Really?.' }, { quoted: m });
+        return;
+    }
     await handlePromote(sock, m, text, sender, sleep);
     return;
 }
 
 		// 📉 Demote Command Handler
 if (text.toLowerCase().startsWith('.demote')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot demote the owner.' }, { quoted: m });
+        return;
+    }
     await handleDemote(sock, m, text, sender, sleep);
     return;
 }
@@ -861,39 +943,92 @@ if (text.toLowerCase().startsWith('.unlimit') || text.toLowerCase().startsWith('
 
 		// 🔒 Lock Command Handler
 if (text.toLowerCase().startsWith('.lock')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot lock the owner.' }, { quoted: m });
+        return;
+    }
     await handleLock(sock, m, text, sender, sleep);
     return;
 }
 
 if (text.toLowerCase().startsWith('.scr')) {
+    if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+        await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .scr.' }, { quoted: m });
+        return;
+    }
+    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for automatic sticker edits.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'scr', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .scr again.` }, { quoted: m });
+        return;
+    }
     await handleScr.handle(sock, m, { from: sender, quoted: contextInfo?.quotedMessage });
     return;
 }
 
 		// 🔓 Unlock Command Handler
 if (text.toLowerCase().startsWith('.unlock')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: "❌ You could'nt lock the owner in the first place." }, { quoted: m });
+        return;
+    }
     await handleUnlock(sock, m, text, sender, sleep);
     return;
 }
 
 // 🚫 .block (Reply to user or tag them)
         if (text.toLowerCase().startsWith('.block')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot block the owner.' }, { quoted: m });
+        return;
+    }
     await handleBlock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
 if (text.toLowerCase().startsWith('.unblock')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: '❌ You cannot unblock the owner.' }, { quoted: m });
+        return;
+    }
     await handleUnblock({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
 if (text.toLowerCase().startsWith('.limit')) {
+    if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+        await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .limit.' }, { quoted: m });
+        return;
+    }
     await handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
     return;
 }
 
 		// 📊 .poll Command (Create interactive WhatsApp polls)
 		if (text.toLowerCase().startsWith('.poll')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ Only group admins can use .poll.' }, { quoted: m });
+        return;
+    }
     await handlePollCommand({ sock, m, text, sender, sleep });
     return;
 }
@@ -925,6 +1060,15 @@ if (antiLinkCommand === '.antilink on' || antiLinkCommand === '.antilink off') {
         await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
         return;
     }
+    if (!isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for anti-link automation.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'antilink', userId: senderJid, groupId: sender, cooldownMs: 120000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before toggling anti-link again.` }, { quoted: m });
+        return;
+    }
 
     if (antiLinkCommand === '.antilink on') {
         enableAntiLink(sender);
@@ -948,14 +1092,18 @@ if (antiLinkCommand === '.antilink') {
 
         // 🗣️ Text-to-Speech Command Handler
 if (text.toLowerCase().startsWith('.tts')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ Only group admins can use .tts.' }, { quoted: m });
+        return;
+    }
     await handleTTS(sock, m, text, sender, sleep);
     return;
 }
 
         // Private Mode Switch
         if (text.toLowerCase() === '.private') {
-            if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: `❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳` });
                 return;
             }
             isPrivate = true;
@@ -966,8 +1114,8 @@ if (text.toLowerCase().startsWith('.tts')) {
 
         // Public Mode Switch
         if (text.toLowerCase() === '.public') {
-            if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: `❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳` });
                 return;
             }
             isPrivate = false;
@@ -977,8 +1125,8 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
 	if (text.toLowerCase() === '.restart') {
-            if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: `❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳` });
                 return;
             }
             await sock.sendMessage(sender, {
@@ -994,8 +1142,8 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
 	if (text.toLowerCase() === '.kill') {
-            if (!isOwnerSenderNumber(senderNumber)) {
-                await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
+            if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+                await sock.sendMessage(sender, { text: `❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳` });
                 return;
             }
             await sleep(1500);
@@ -1011,6 +1159,23 @@ if (text.toLowerCase().startsWith('.tts')) {
 
         // 📢 Tagall / Everyone Command Handler
 if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.everyone') || text.trim() === '📢') {
+    if (!sender.endsWith('@g.us')) {
+        await sock.sendMessage(sender, { text: '❌ Tagall only works inside a group.' }, { quoted: m });
+        return;
+    }
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (!isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for tagall.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'tagall', userId: senderJid, groupId: sender, cooldownMs: 30 * 60 * 1000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using tagall again.` }, { quoted: m });
+        return;
+    }
     await handleTagAll(sock, m, text, sender, sleep);
     return;
 }
@@ -1022,6 +1187,10 @@ if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.
 }
 
 if (text.toLowerCase().startsWith('.alive')) {
+    if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
     await handleAlive({ sock, m, sender, senderNumber, senderJid, sleep });
     return;
 }
@@ -1068,6 +1237,15 @@ if (text.toLowerCase().startsWith('.removebg') || text.toLowerCase().startsWith(
 }
 
 if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text.toLowerCase().startsWith('.toimg')) {
+    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'toimg', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
+        return;
+    }
     await handleToImg({ sock, m, sender, sleep, getContextInfo });
     return;
 }
@@ -1078,6 +1256,14 @@ if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toL
 }
 
 if (text.toLowerCase().startsWith('.add') || text.toLowerCase().startsWith('.addmember')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+        return;
+    }
+    if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+        await sock.sendMessage(sender, { text: 'The owner is in the chat already.' }, { quoted: m });
+        return;
+    }
     await handleAdd({ sock, m, sender, text, sleep });
     return;
 }
@@ -1088,14 +1274,25 @@ if (text.toLowerCase().startsWith('.mylove')) {
 }
 
 // 🚀 PLACE YOUR COMMAND TRIGGERS RIGHT AFTER
-    if (text.toLowerCase() === 'broo' || text.toLowerCase() === '.antiviewonce') {
+    if (text.toLowerCase() === '.vv' || text.toLowerCase() === '.antiviewonce') {
+        if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
+            await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .vv.' }, { quoted: m });
+            return;
+        }
         await handleVV({ sock, m, sender, sleep, getContextInfo, OWNER_NUMBER });
         return;
     };
 
 // 🔇 .mute Command (Group Admin Only)
 		if (text.toLowerCase().startsWith('.mute')) {
-			await handleMute({ sock, m, sender, text, sleep, getContextInfo });
+            if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+                return;
+            }
+            if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                await sock.sendMessage(sender, { text: '❌ You cannot mute the owner.' }, { quoted: m });
+                return;
+            }
 			return;
 		}
 
@@ -1109,17 +1306,38 @@ if (textLower === '.st' || textLower === 'i want it' || textLower.startsWith('.s
 
 		// 🔊 .unmute Command (Group Admin Only)
 		if (text.toLowerCase().startsWith('.unmute')) {
+            if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+                await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
+                return;
+            }
+            if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                await sock.sendMessage(sender, { text: "❌ You could'nt mute the owner in the first place." }, { quoted: m });
+                return;
+            }
 			await handleUnmute({ sock, m, sender, text, sleep, getContextInfo });
 			return;
 		}
 
 		// 🎨 Sticker Command Handler
 if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
+    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker creation.' }, { quoted: m });
+        return;
+    }
+    const rateLimit = canUseCommand({ command: 'sticker', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .s again.` }, { quoted: m });
+        return;
+    }
     await handleSticker(sock, m, text, sender, sleep);
     return;
 }
 
-        if (text.toLowerCase().startsWith('custom..')) {
+        if (text.toLowerCase().startsWith('.welcome')) {
+    if (!await isAdminActionAllowed(sock, sender, senderNumber, senderJid, m)) {
+        await sock.sendMessage(sender, { text: '❌ Only group admins can use .welcome.' }, { quoted: m });
+        return;
+    }
     await handleFlog({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo });
     return;
 }
