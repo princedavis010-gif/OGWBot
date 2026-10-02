@@ -91,7 +91,7 @@ module.exports = async function handleSong({ sock, m, sender, text }) {
 
     if (!query) {
         await sock.sendMessage(chatId, { 
-            text: '🎵 *Song Downloader*\n\nUsage:\n.song <song name | YouTube link>' 
+            text: '🎵 *Song Downloader*\n\n*Usage:*\n>.vibe <name> ' 
         });
         return;
     }
