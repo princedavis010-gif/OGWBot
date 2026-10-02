@@ -89,10 +89,14 @@ function parseAccessChange(text) {
 }
 
 function hasChainedDotCommands(text) {
-    if (!text.trim().startsWith('.')) return false;
-    if (parseAccessChange(text)) return false;
+    const trimmedText = text.trim();
+    if (!trimmedText.startsWith('.')) return false;
+    if (parseAccessChange(trimmedText)) return false;
 
-    return text.trim().split(/\s+/).slice(1).some((token) => /^\.[a-z][a-z0-9_-]*$/i.test(token));
+    const lines = trimmedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (lines.length > 1 && lines.every((line) => /^\.poll(?:\s|$)/i.test(line))) return false;
+
+    return trimmedText.split(/\s+/).slice(1).some((token) => /^\.[a-z][a-z0-9_-]*$/i.test(token));
 }
 
 function getMode() {
