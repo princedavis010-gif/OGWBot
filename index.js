@@ -74,6 +74,7 @@ const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and t
 const aiMessageKeys = new Set();
 const outgoingMessageContext = new AsyncLocalStorage();
 const botMessageKinds = new Map();
+const processedMessageKeys = new Set();
 const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService');
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
@@ -633,6 +634,13 @@ sock.ev.on('group-participants.update', async (update) => {
         const messageTimestamp = m.messageTimestamp;
         if (messageTimestamp && messageTimestamp < botStartTime) {
             continue; // Skip old offline messages
+        }
+
+        const eventMessageKey = `${m.key.remoteJid}:${m.key.id}`;
+        if (processedMessageKeys.has(eventMessageKey)) continue;
+        processedMessageKeys.add(eventMessageKey);
+        if (processedMessageKeys.size > 1000) {
+            processedMessageKeys.delete(processedMessageKeys.values().next().value);
         }
 
         const sender = m.key.remoteJid;
