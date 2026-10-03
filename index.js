@@ -74,6 +74,7 @@ const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and t
 const aiMessageKeys = new Set();
 const outgoingMessageContext = new AsyncLocalStorage();
 const botMessageKinds = new Map();
+let botIsDead = false;
 const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService');
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
@@ -95,6 +96,27 @@ function rememberBotMessage(messageId, kind = 'normal') {
     if (botMessageKinds.size > 500) {
         botMessageKinds.delete(botMessageKinds.keys().next().value);
     }
+}
+
+function unwrapMessageContent(message) {
+    let content = message;
+    while (content?.ephemeralMessage || content?.viewOnceMessage ||
+        content?.viewOnceMessageV2 || content?.documentWithCaptionMessage) {
+        content = content.ephemeralMessage?.message ||
+            content.viewOnceMessage?.message ||
+            content.viewOnceMessageV2?.message ||
+            content.documentWithCaptionMessage?.message;
+    }
+    return content || {};
+}
+
+function getMessageText(content) {
+    if (content.conversation) return content.conversation;
+    if (content.extendedTextMessage) return content.extendedTextMessage.text || '';
+    if (content.imageMessage?.caption) return content.imageMessage.caption;
+    if (content.videoMessage?.caption) return content.videoMessage.caption;
+    if (content.documentMessage?.caption) return content.documentMessage.caption;
+    return '';
 }
 
 function trackOutgoingMessages(sock) {
@@ -453,7 +475,7 @@ async function connectToWhatsApp() {
     let readyAnnouncementSent = false;
 
     const announceReady = async () => {
-        if (!connectionIsOpen || readyAnnouncementSent || !botJid) return;
+        if (botIsDead || !connectionIsOpen || readyAnnouncementSent || !botJid) return;
         if (global.activeSock !== sock) return;
 
         const singleCommandCheck = handleTagAll;
@@ -585,7 +607,7 @@ async function connectToWhatsApp() {
 
 // Listen for group participant updates (Joins, leaves, etc.)
 sock.ev.on('group-participants.update', async (update) => {
-    if (global.activeSock !== sock) return;
+    if (botIsDead || global.activeSock !== sock) return;
     try {
         await handleWelcome({ sock, update, sleep });
     } catch (error) {
@@ -618,6 +640,38 @@ sock.ev.on('group-participants.update', async (update) => {
         try {
         if (type === 'append' && !m.key?.fromMe) continue;
         if (!m.message) continue;
+
+        if (botIsDead) {
+            if (m.messageTimestamp && m.messageTimestamp < botStartTime) continue;
+            const content = unwrapMessageContent(m.message);
+            const text = getMessageText(content).trim();
+            if (text.toLowerCase() !== '.life') continue;
+
+            const sender = m.key.remoteJid;
+            const senderJid = m.key.participant || sender;
+            const senderIdentity = await getActivityPhoneNumber({
+                message: m,
+                senderJid,
+                senderNumber: m.key.fromMe ? botPhoneNumber : '',
+                getSenderNumber,
+                resolveLid: (jid) => sock.signalRepository.lidMapping.getPNForLID(jid),
+                resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
+            });
+            if (!isOwnerSenderNumber(senderIdentity.phoneNumber)) continue;
+
+            botIsDead = false;
+            await handleQuoteToggle({
+                sock,
+                m,
+                sender,
+                text,
+                senderNumber: senderIdentity.phoneNumber,
+                OWNER_NUMBER,
+                botPhoneNumber,
+                sleep
+            });
+            continue;
+        }
 
         // If the message was sent by your account (fromMe):
         if (m.key.fromMe) {
@@ -1287,6 +1341,7 @@ if (text.toLowerCase() === '.life' || text.toLowerCase() === '.death') {
                 return;
             }
 
+    if (text.trim().toLowerCase() === '.death') botIsDead = true;
     await handleQuoteToggle({ sock, m, sender, text, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep });
     return;
 }
