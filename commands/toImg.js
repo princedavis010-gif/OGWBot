@@ -2,7 +2,7 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
 
 function unwrapMessage(message) {
- /*   let content = message;
+    let content = message;
     while (content?.ephemeralMessage || content?.viewOnceMessage || content?.viewOnceMessageV2) {
         content = content.ephemeralMessage?.message ||
             content.viewOnceMessage?.message ||
@@ -53,7 +53,7 @@ async function handleToImg({ sock, m, sender, sleep, getContextInfo }) {
         await sock.sendMessage(sender, {
             text: '❌ Failed to convert static sticker. Please try again.'
         }, { quoted: m });
-    } */
+    } 
 } 
 
 module.exports = handleToImg;
