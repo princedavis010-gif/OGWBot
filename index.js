@@ -504,7 +504,7 @@ async function connectToWhatsApp() {
         if (!selfChatJid) return;
 
         try {
-            const sentMessage = await sock.sendMessage(selfChatJid, ownerChatJid, {
+            const sentMessage = await sock.sendMessage(ownerChatJid, {
                 text: `✅ OG CORE connected successfully to WhatsApp via ${global.whatsappConnection.method} and is ready for commands.`
             });
 
