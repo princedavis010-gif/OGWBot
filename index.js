@@ -1,5 +1,5 @@
 const { Redis } = require('@upstash/redis');
-const { timingSafeEqual } = require('crypto');
+const { timingSafeEqual, randomUUID } = require('crypto');
 const { AsyncLocalStorage } = require('async_hooks');
 const fs = require('fs');
 const path = require('path');
@@ -75,6 +75,7 @@ const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and t
 const aiMessageKeys = new Set();
 const outgoingMessageContext = new AsyncLocalStorage();
 const botMessageKinds = new Map();
+const aiCommandMessageIds = new Set();
 let botIsDead = false;
 const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService');
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
@@ -118,6 +119,22 @@ function getMessageText(content) {
     if (content.videoMessage?.caption) return content.videoMessage.caption;
     if (content.documentMessage?.caption) return content.documentMessage.caption;
     return '';
+}
+
+async function showAiTyping(sock, sender) {
+    try {
+        await sock.sendPresenceUpdate('composing', sender);
+    } catch (error) {
+        console.error('Could not show AI typing presence:', error);
+    }
+
+    await sleep(1500);
+
+    try {
+        await sock.sendPresenceUpdate('paused', sender);
+    } catch (error) {
+        console.error('Could not pause AI typing presence:', error);
+    }
 }
 
 function trackOutgoingMessages(sock) {
@@ -496,12 +513,16 @@ async function connectToWhatsApp() {
 
         if (readyAnnouncementSent || global.activeSock !== sock) return;
 
-        readyAnnouncementSent = true;
         global.whatsappConnection.status = 'connected';
         global.whatsappConnection.method ||= 'saved session';
-        const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
-        const ownerChatJid = `${OWNER_NUMBER}@s.whatsapp.net`;
-        if (!selfChatJid) return;
+        const ownerNumber = normalizePhoneNumber(OWNER_NUMBER);
+        if (!/^\d{7,15}$/.test(ownerNumber)) {
+            console.error('Could not send bot-ready confirmation: owner number is missing or invalid.');
+            return;
+        }
+        const ownerChatJid = `${ownerNumber}@s.whatsapp.net`;
+        // To send this to the paired bot number instead, comment out the owner JID and uncomment:
+        // const ownerChatJid = botJid.replace(/:\d+(?=@)/, '');
 
         try {
             const sentMessage = await sock.sendMessage(ownerChatJid, {
@@ -509,8 +530,9 @@ async function connectToWhatsApp() {
             });
 
             if (sentMessage?.key?.id) aiMessageKeys.add(sentMessage.key.id);
+            readyAnnouncementSent = true;
         } catch (error) {
-            console.error('Could not send bot-ready confirmation to self-chat:', error);
+            console.error('Could not send bot-ready confirmation to owner:', error);
         }
     };
 
@@ -642,6 +664,7 @@ sock.ev.on('group-participants.update', async (update) => {
         try {
         if (type === 'append' && !m.key?.fromMe) continue;
         if (!m.message) continue;
+        const isAiGeneratedCommand = aiCommandMessageIds.delete(m.key?.id);
 
         if (botIsDead) {
             if (m.messageTimestamp && m.messageTimestamp < botStartTime) continue;
@@ -781,7 +804,7 @@ sock.ev.on('group-participants.update', async (update) => {
 
         if (isBlacklisted(senderNumber) && !isOwnerSenderNumber(senderNumber)) return;
 
-        if (!isOwnerSenderNumber(senderNumber)) {
+        if (!isAiGeneratedCommand && !isOwnerSenderNumber(senderNumber)) {
             const usageCheck = checkAndIncrementUsage(senderNumber, OWNER_NUMBER);
             if (!usageCheck.allowed) {
                 await sock.sendMessage(sender, {
@@ -793,9 +816,11 @@ sock.ev.on('group-participants.update', async (update) => {
 
         if (await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid })) return;
 
-        sock.readMessages([m.key]).catch((error) => {
-            console.error('Failed to mark message as read:', error);
-        });
+        if (!isAiGeneratedCommand) {
+            sock.readMessages([m.key]).catch((error) => {
+                console.error('Failed to mark message as read:', error);
+            });
+        }
 
 // 🔇 Check if the user is muted in this group
 if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
@@ -1568,7 +1593,10 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                     prompt = prompt.slice(1).trim();
                 }
             } else if (isMentioned) {
-                prompt = text.replace(/@\d+/g, '').trim();
+                prompt = text.replace(/@\d+/g, (mention) => {
+                    const mentionedNumber = getCleanNumber(mention.slice(1));
+                    return mentionedNumber === botNumber || mentionedNumber === botLidNumber ? '' : mention;
+                }).trim();
             }
 
             let quotedText = '';
@@ -1591,6 +1619,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 attachmentParts = await getAiAttachmentParts({ message: msgContent, contextInfo });
             } catch (error) {
                 console.error('AI attachment processing failed:', error);
+                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: `❌ I couldn't read that attachment: ${error.message}` }, { quoted: m });
                 return;
             }
@@ -1602,7 +1631,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 } else if (quotedText) {
                     prompt = 'Please respond to the message I am replying to.';
                 } else {
-                    await sock.sendPresenceUpdate('composing', sender);
+                    await showAiTyping(sock, sender);
                     const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
                     if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id);
                     return;
@@ -1621,11 +1650,13 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 let imagePrompt = userPrompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
                 if (!imagePrompt) imagePrompt = "A futuristic Lagos skyline";
 
+                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: "Calm, you'll get it in a moment..." }, { quoted: m });
 
                 try {
                     const imageData = await getAiImageResponse(imagePrompt);
 
+                    await showAiTyping(sock, sender);
                     const sentMsg = await sock.sendMessage(sender, { 
                         image: imageData.buffer, 
                         caption: `*Here you go as you asked*, *${imagePrompt}*` 
@@ -1634,6 +1665,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
                 } catch (imgError) {
                     console.error("Image gen failure:", imgError);
+                    await showAiTyping(sock, sender);
                     await sock.sendMessage(sender, { text: "😭 Emotional Damage. Something went wrong." });
                 }
                 return;
@@ -1641,8 +1673,55 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             // Otherwise, handle regular text chat
             try {
-                const replyText = await getAiResponse(prompt, attachmentParts);
+                const aiResult = await getAiResponse(prompt, attachmentParts, async (requestedCommand) => {
+                    const commandText = String(requestedCommand || '').trim();
+                    const commandLines = commandText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+                    const isPollBatch = commandLines.length > 1 && commandLines.every((line) => /^\.poll(?:\s|$)/i.test(line));
+                    if (!commandText || commandText.length > 500 || commandText.includes(';') ||
+                        (/[\r\n]/.test(commandText) && !isPollBatch) || hasChainedDotCommands(commandText)) {
+                        return { executed: false, reason: 'Only one command can be run at a time.' };
+                    }
 
+                    const commandName = resolveCommandName(commandText);
+                    if (!commandName || (commandName === 'quote' && !/^\.(?:life|death)$/i.test(commandText))) {
+                        return { executed: false, reason: 'That is not a supported command.' };
+                    }
+
+                    const commandMentionJids = (contextInfo?.mentionedJid || []).filter((jid) => {
+                        const mentionedNumber = getCleanNumber(jid);
+                        return mentionedNumber !== botNumber && mentionedNumber !== botLidNumber;
+                    });
+                    const commandContextInfo = contextInfo
+                        ? { ...contextInfo, mentionedJid: commandMentionJids }
+                        : undefined;
+                    const commandMessage = {
+                        ...m,
+                        key: { ...m.key, id: randomUUID(), fromMe: false },
+                        messageTimestamp: Math.floor(Date.now() / 1000),
+                        message: {
+                            extendedTextMessage: {
+                                text: commandText,
+                                ...(commandContextInfo ? { contextInfo: commandContextInfo } : {})
+                            }
+                        }
+                    };
+                    aiCommandMessageIds.add(commandMessage.key.id);
+
+                    outgoingMessageContext.run({
+                        isCommandDelivery: true,
+                        allowReplies: /^\.insult(?:\s|$)/i.test(commandText) || /^\.welcome(?:\s|$)/i.test(commandText)
+                    }, () => {
+                        showAiTyping(sock, sender).then(() => {
+                            sock.ev.emit('messages.upsert', { messages: [commandMessage], type: 'notify' });
+                        });
+                    });
+
+                    return { executed: true };
+                });
+                if (aiResult.commandExecuted) return;
+                const replyText = aiResult.text;
+
+                await showAiTyping(sock, sender);
                 const sentMsg = await sock.sendMessage(sender, { text: replyText }, { quoted: m });
                 
                 // 👈 Track this message ID so you can reply to it for continuous chat
@@ -1656,6 +1735,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             } catch (error) {
                 console.error("Gemini API Error:", error);
+                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: "Calm, one at a time please. 🙂" });
             }
             return;
