@@ -1335,7 +1335,7 @@ if (cleanText === '.flirt' || cleanText.startsWith('.flirt ') ||
 }
 
 if (resolveCommandName(text) === 'lovetest') {
-    await handleLoveTest({ sock, m, sender, text });
+    await handleLoveTest({ sock, m, sender, text, contextInfo });
     return;
 }
 
