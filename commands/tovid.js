@@ -93,12 +93,12 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
         await execFileAsync(ffmpegPath, ffmpegArgs, { timeout: 60000, maxBuffer: 1024 * 1024 });
 
         const videoBuffer = fs.readFileSync(outputPath);
-        
+
         await sock.sendMessage(sender, {
             video: videoBuffer,
             mimetype: 'video/mp4',
             fileName: 'sticker.mp4',
-          //  caption: '🎬 Converted to MP4 video.'
+            caption: '🎬 Converted to MP4 video.'
         }, { quoted: m });
     } catch (error) {
         console.error('Video sticker conversion error:', error);
