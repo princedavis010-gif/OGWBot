@@ -19,7 +19,7 @@ function unwrapMessage(message) {
     return content;
 }
 
-async function handleToVid({ sock, m, sender, sleep, getContextInfo }) {
+async function handleToVid({ sock, m, sender, getContextInfo }) {
     const msgContent = unwrapMessage(m.message) || {};
     const contextInfo = getContextInfo ? getContextInfo() : null;
     let stickerMessage = msgContent.stickerMessage || null;
@@ -76,9 +76,9 @@ async function handleToVid({ sock, m, sender, sleep, getContextInfo }) {
             '-i', inputPath,
             '-map', '0:v:0',
             '-an',
-            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p',
+            '-vf', 'fps=15,scale=512:512:force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p',
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
+            '-preset', 'ultrafast',
             '-crf', '23',
             '-movflags', '+faststart',
             outputPath
@@ -87,7 +87,6 @@ async function handleToVid({ sock, m, sender, sleep, getContextInfo }) {
         await execFileAsync(ffmpegPath, ffmpegArgs, { timeout: 60000, maxBuffer: 1024 * 1024 });
 
         const videoBuffer = fs.readFileSync(outputPath);
-        await sleep(1000);
         await sock.sendMessage(sender, {
             video: videoBuffer,
             mimetype: 'video/mp4',
