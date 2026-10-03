@@ -4,6 +4,7 @@ const path = require('path');
 const { promisify } = require('util');
 const { execFile } = require('child_process');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const sharp = require('sharp');
 const ffmpegPath = require('ffmpeg-static');
 
 const execFileAsync = promisify(execFile);
@@ -56,18 +57,22 @@ async function handleToVid({ sock, m, sender, sleep, getContextInfo }) {
 
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tovid-'));
         
-        // Write the downloaded sticker file directly to disk
-        // FFmpeg handles both video-mimetype stickers and raw animated webp natively.
-        const inputExt = isVideoSticker ? (/webm/i.test(mimetype) ? 'webm' : 'mp4') : 'webp';
-        const inputPath = path.join(tempDir, `input.${inputExt}`);
-        fs.writeFileSync(inputPath, stickerBuffer);
+        let inputPath;
+        if (isVideoSticker) {
+            const inputExt = /webm/i.test(mimetype) ? 'webm' : 'mp4';
+            inputPath = path.join(tempDir, `input.${inputExt}`);
+            fs.writeFileSync(inputPath, stickerBuffer);
+        } else {
+            inputPath = path.join(tempDir, 'input.gif');
+            const gifBuffer = await sharp(stickerBuffer, { animated: true })
+                .gif({ loop: 0, delay: 100 })
+                .toBuffer();
+            fs.writeFileSync(inputPath, gifBuffer);
+        }
 
         const outputPath = path.join(tempDir, 'sticker.mp4');
-        
-        // FFmpeg args optimized to force looping/decoding on multi-frame webp inputs
         const ffmpegArgs = [
             '-y',
-            ...(isAnimatedWebp ? ['-vcodec', 'libwebp'] : []), // Ensure webp parser is explicit if animated
             '-i', inputPath,
             '-map', '0:v:0',
             '-an',
