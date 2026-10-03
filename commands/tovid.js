@@ -2,12 +2,63 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { promisify } = require('util');
+const { Resolver } = require('node:dns');
 const { execFile } = require('child_process');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
 const ffmpegPath = require('ffmpeg-static');
+const { Agent } = require('undici');
 
 const execFileAsync = promisify(execFile);
+const mediaDnsResolver = new Resolver({ timeout: 2000, tries: 2 });
+const mediaDnsServers = (process.env.TOVID_DNS_SERVERS || '1.1.1.1,8.8.8.8')
+    .split(',')
+    .map((server) => server.trim())
+    .filter(Boolean);
+mediaDnsResolver.setServers(mediaDnsServers);
+
+function lookupMediaHost(hostname, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options = {};
+    }
+
+    const requestedFamily = options?.family || 0;
+    const resolvers = requestedFamily === 6
+        ? [mediaDnsResolver.resolve6]
+        : requestedFamily === 4
+            ? [mediaDnsResolver.resolve4]
+            : [mediaDnsResolver.resolve4, mediaDnsResolver.resolve6];
+
+    (async () => {
+        let lastError;
+        for (const resolve of resolvers) {
+            try {
+                const addresses = await new Promise((resolveRecords, reject) => {
+                    resolve.call(mediaDnsResolver, hostname, (error, records) =>
+                        error ? reject(error) : resolveRecords(records)
+                    );
+                });
+                return addresses.map((address) => ({
+                    address,
+                    family: address.includes(':') ? 6 : 4
+                }));
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError;
+    })().then((records) => {
+        if (options?.all) {
+            callback(null, records);
+            return;
+        }
+        const record = records.find((entry) => !requestedFamily || entry.family === requestedFamily) || records[0];
+        callback(null, record.address, record.family);
+    }).catch(callback);
+}
+
+const mediaDispatcher = new Agent({ connect: { lookup: lookupMediaHost } });
 
 function unwrapMessage(message) {
     let content = message;
@@ -30,10 +81,25 @@ function getNestedErrorCode(error) {
 
 async function downloadStickerBuffer(stickerMessage) {
     const retryableCodes = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT']);
+    const downloadMessage = { ...stickerMessage };
+    let host;
+
+    if (downloadMessage.directPath) {
+        host = 'mmg.whatsapp.net';
+    } else if (downloadMessage.url) {
+        const mediaUrl = new URL(downloadMessage.url);
+        if (mediaUrl.hostname === 'a.whatsapp.net') {
+            mediaUrl.hostname = 'mmg.whatsapp.net';
+            downloadMessage.url = mediaUrl.toString();
+        }
+    }
 
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-            const stream = await downloadContentFromMessage(stickerMessage, 'sticker');
+            const stream = await downloadContentFromMessage(downloadMessage, 'sticker', {
+                host,
+                options: { dispatcher: mediaDispatcher }
+            });
             const chunks = [];
             for await (const chunk of stream) chunks.push(chunk);
             return Buffer.concat(chunks);
@@ -126,8 +192,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
         console.error('Video sticker conversion error:', error);
         const errorCode = getNestedErrorCode(error);
         const message = errorCode === 'ENOTFOUND' || errorCode === 'EAI_AGAIN'
-            ? `❌ WhatsApp media DNS lookup failed (${errorCode}). Check the server's internet/DNS connection and try again.`
-            : '❌ Failed to process the sticker file.';
+            ? `❌ Failed to process the sticker file.` : '❌ Failed to process the sticker file.';
         await sock.sendMessage(sender, {
             text: message
         }, { quoted: m });
