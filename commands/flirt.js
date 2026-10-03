@@ -15,7 +15,13 @@ async function handleFlirt({ sock, m, sender, senderNumber, senderJid, sleep, lo
         "If being cute was a crime, you'd be public enemy number one. 👑",
         "Can I borrow a kiss? I promise I'll pay it back with interest. 💋",
         "Are you suya? Because you are looking spicy and fine tonight! 🔥",
-        "Do you believe in love at first sight, or should I walk past your chat again? 😏"
+        "Do you believe in love at first sight, or should I walk past your chat again? 😏",
+        "Are you Wi-Fi? Because I'm feeling a really good connection 📶",
+        "I searched on Google, and you're the best match I found 🌐",
+        "The screenshot of your smile is the best photo in my gallery 📸",
+        "When I looked into your eyes, time stood still. ⏱️",
+        "You are like Google — I have found everything in you.",
+        "The list of your praises is so long that even the WhatsApp character limit gave up 💯"
     ];
 
     const randomFlirt = flirts[Math.floor(Math.random() * flirts.length)];
