@@ -11,7 +11,7 @@ async function handleTTS(sock, m, text, sender, sleep) {
     try {
         await sleep(1000);
         const encodedText = encodeURIComponent(queryText);
-        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en-US&client=tw-ob`;
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en-GB&client=tw-ob`;
 
         // Fetch with full browser spoofing headers to bypass server blocks
         const response = await fetch(ttsUrl, {

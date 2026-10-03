@@ -122,7 +122,10 @@ async function getAiAttachmentParts({ message, contextInfo }) {
 
     const { message: mediaMessage, type } = attachment;
     const fileName = mediaMessage.fileName || mediaMessage.title || `WhatsApp ${type}`;
-    const mimeType = inferMimeType(fileName, mediaMessage.mimetype);
+    const detectedMimeType = inferMimeType(fileName, mediaMessage.mimetype);
+    const mimeType = type === 'audio'
+        ? detectedMimeType.split(';', 1)[0].trim()
+        : detectedMimeType;
     const buffer = await readMediaBuffer(mediaMessage, type);
 
     if (mimeType === 'application/vnd.android.package-archive' || path.extname(fileName).toLowerCase() === '.apk') {

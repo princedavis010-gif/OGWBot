@@ -1,5 +1,6 @@
 const { Redis } = require('@upstash/redis');
 const { timingSafeEqual } = require('crypto');
+const { AsyncLocalStorage } = require('async_hooks');
 const fs = require('fs');
 const path = require('path');
 const handleScr = require('./commands/scr');
@@ -71,6 +72,8 @@ const { getAiAttachmentParts } = require('./utils/aiAttachments');
 const chatHistories = new Map(); // Key: JID, Value: Array of message turns
 const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and tokens
 const aiMessageKeys = new Set();
+const outgoingMessageContext = new AsyncLocalStorage();
+const botMessageKinds = new Map();
 const { getAiClient, getAiResponse, getAiImageResponse } = require('./aiService');
 let showTerminalLogs = false; // Enabled by default so you can see incoming messages in your terminal!
 let botJid = '';
@@ -85,6 +88,27 @@ const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 // const qrcode = require('qrcode-terminal');
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function rememberBotMessage(messageId, kind = 'normal') {
+    if (!messageId) return;
+    botMessageKinds.set(messageId, kind);
+    if (botMessageKinds.size > 500) {
+        botMessageKinds.delete(botMessageKinds.keys().next().value);
+    }
+}
+
+function trackOutgoingMessages(sock) {
+    const sendMessage = sock.sendMessage.bind(sock);
+    sock.sendMessage = async (...args) => {
+        const sentMessage = await sendMessage(...args);
+        const commandContext = outgoingMessageContext.getStore();
+        const kind = commandContext?.isCommandDelivery
+            ? commandContext.allowReplies ? 'reply-enabled-command' : 'command'
+            : 'normal';
+        rememberBotMessage(sentMessage?.key?.id, kind);
+        return sentMessage;
+    };
+}
 
 function connectionStatusMarkup() {
     return `<p id="connection-status" role="status">Checking WhatsApp connection...</p>
@@ -422,6 +446,7 @@ async function connectToWhatsApp() {
         logger: pino({ level: 'silent' }),
         auth: state
     });
+    trackOutgoingMessages(sock);
     global.activeSock = sock;
     let connectionIsOpen = false;
     let messageHandlersReady = false;
@@ -587,14 +612,16 @@ sock.ev.on('group-participants.update', async (update) => {
 
     // Listen for incoming messages
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
+    if (type !== 'notify' && type !== 'append') return;
 
     for (const m of messages) {
         try {
+        if (type === 'append' && !m.key?.fromMe) continue;
         if (!m.message) continue;
 
         // If the message was sent by your account (fromMe):
         if (m.key.fromMe) {
+            if (!botMessageKinds.has(m.key.id)) rememberBotMessage(m.key.id);
             // If the bot itself generated and sent this message, ignore it to prevent infinite loops.
             if (aiMessageKeys.has(m.key.id)) {
                 continue;
@@ -664,9 +691,16 @@ sock.ev.on('group-participants.update', async (update) => {
                    msgContent.documentMessage?.contextInfo || null;
         };
         const contextInfo = getContextInfo();
-        if (!text && !contextInfo?.mentionedJid?.length) continue;
+        if (!text && !contextInfo?.mentionedJid?.length && !contextInfo?.stanzaId) continue;
 
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
+        const isCommandDelivery = /^\s*\./.test(text) ||
+            (activityAction && activityAction !== 'AI chat' && activityAction !== 'AI mention');
+        await outgoingMessageContext.run({
+            isCommandDelivery: Boolean(isCommandDelivery),
+            allowReplies: /^\.insult(?:\s|$)/i.test(text.trim()) || /^\.welcome(?:\s|$)/i.test(text.trim())
+        }, async () => {
+
         if (activityAction) {
             const activityIdentity = await getActivityPhoneNumber({
                 message: m,
@@ -700,7 +734,7 @@ sock.ev.on('group-participants.update', async (update) => {
             }
         }
 
-        if (await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid })) continue;
+        if (await checkAntiLink({ sock, m, sender, text, senderNumber, senderJid })) return;
 
         sock.readMessages([m.key]).catch((error) => {
             console.error('Failed to mark message as read:', error);
@@ -1438,12 +1472,11 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
         const isGroup = sender.endsWith('@g.us');
         let isQuotingBot = false;
         
-        // 👈 Only allow quote-replies if the quoted message was an actual AI response
-        if (contextInfo && contextInfo.stanzaId) {
-            if (aiMessageKeys.has(contextInfo.stanzaId)) {
-                isQuotingBot = true;
-            }
-        }
+        const repliedBotMessageKind = contextInfo?.stanzaId
+            ? botMessageKinds.get(contextInfo.stanzaId)
+            : null;
+        isQuotingBot = Boolean(repliedBotMessageKind);
+        if (repliedBotMessageKind === 'command') return;
 
         const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('hey og');
 
@@ -1475,6 +1508,21 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 prompt = text.replace(/@\d+/g, '').trim();
             }
 
+            let quotedText = '';
+            let quotedContent = contextInfo?.quotedMessage;
+            while (quotedContent?.ephemeralMessage || quotedContent?.viewOnceMessage ||
+                quotedContent?.viewOnceMessageV2 || quotedContent?.documentWithCaptionMessage) {
+                quotedContent = quotedContent.ephemeralMessage?.message ||
+                    quotedContent.viewOnceMessage?.message ||
+                    quotedContent.viewOnceMessageV2?.message ||
+                    quotedContent.documentWithCaptionMessage?.message;
+            }
+            quotedText = quotedContent?.conversation ||
+                quotedContent?.extendedTextMessage?.text ||
+                quotedContent?.imageMessage?.caption ||
+                quotedContent?.videoMessage?.caption ||
+                quotedContent?.documentMessage?.caption || '';
+
             let attachmentParts;
             try {
                 attachmentParts = await getAiAttachmentParts({ message: msgContent, contextInfo });
@@ -1488,6 +1536,8 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
             if (!prompt) {
                 if (attachmentParts.length) {
                     prompt = "Please inspect the attached file and answer the user's question if one is included. Otherwise, briefly describe what you can determine from it.";
+                } else if (quotedText) {
+                    prompt = 'Please respond to the message I am replying to.';
                 } else {
                     await sock.sendPresenceUpdate('composing', sender);
                     const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
@@ -1496,11 +1546,16 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 }
             }
 
+            const userPrompt = prompt;
+            if (quotedText) {
+                prompt = `The user is replying to this message:\n"${quotedText.slice(0, 5000)}"\n\nUser's message: ${prompt}`;
+            }
+
             // 👇 CHECK IF USER WANTS AN IMAGE NATIVELY USING OG
-            const isImageRequest = /\b(draw|generate|paint|create an image|create a picture|pic of|photo of|image of)\b/i.test(prompt);
+            const isImageRequest = /\b(draw|generate|paint|create an image|create a picture|pic of|photo of|image of)\b/i.test(userPrompt);
 
             if (isImageRequest && attachmentParts.length === 0) {
-                let imagePrompt = prompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
+                let imagePrompt = userPrompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
                 if (!imagePrompt) imagePrompt = "A futuristic Lagos skyline";
 
                 await sock.sendMessage(sender, { text: "Calm, you'll get it in a moment..." }, { quoted: m });
@@ -1542,6 +1597,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
             }
             return;
         }
+        });
         } catch (error) {
             console.error(`Failed to process WhatsApp message in ${m.key?.remoteJid || 'unknown chat'}:`, error);
         }
