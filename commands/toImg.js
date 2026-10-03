@@ -1,4 +1,4 @@
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+/* const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
 
 function unwrapMessage(message) {
@@ -54,6 +54,6 @@ async function handleToImg({ sock, m, sender, sleep, getContextInfo }) {
             text: '❌ Failed to convert static sticker. Please try again.'
         }, { quoted: m });
     }
-}
+} */
 
 module.exports = handleToImg;
