@@ -83,7 +83,6 @@ let botLid = '';
 let botPhoneNumber = '';
 const ENV_OWNER_NUMBER = String(process.env.OWNER_NUMBER || '').replace(/\D/g, '');
 let OWNER_NUMBER = ENV_OWNER_NUMBER;
-const ownerChatJid = `${OWNER_NUMBER}@s.whatsapp.net`;
 const PAIRING_SETUP_TOKEN = process.env.PAIRING_SETUP_TOKEN || '';
 const ACTIVITY_DASHBOARD_PASSWORD = process.env.ACTIVITY_DASHBOARD_PASSWORD || '';
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -501,6 +500,7 @@ async function connectToWhatsApp() {
         global.whatsappConnection.status = 'connected';
         global.whatsappConnection.method ||= 'saved session';
         const selfChatJid = botJid.replace(/:\d+(?=@)/, '');
+        const ownerChatJid = `${OWNER_NUMBER}@s.whatsapp.net`;
         if (!selfChatJid) return;
 
         try {
