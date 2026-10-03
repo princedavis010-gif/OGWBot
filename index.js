@@ -1269,7 +1269,7 @@ if (text.toLowerCase() === '.toim' || text.toLowerCase() === '.toimage' || text.
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
         return;
     }
-    await handleToImg({ sock, m, sender, sleep, getContextInfo });
+   // await handleToImg({ sock, m, sender, sleep, getContextInfo });
     return;
 }
 
