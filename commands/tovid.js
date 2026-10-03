@@ -93,7 +93,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
         await execFileAsync(ffmpegPath, ffmpegArgs, { timeout: 60000, maxBuffer: 1024 * 1024 });
 
         const videoBuffer = fs.readFileSync(outputPath);
-        await sleep(1000);
+        
         await sock.sendMessage(sender, {
             video: videoBuffer,
             mimetype: 'video/mp4',
