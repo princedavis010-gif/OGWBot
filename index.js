@@ -1259,7 +1259,7 @@ if (text.toLowerCase().startsWith('.removebg') || text.toLowerCase().startsWith(
     return;
 }
 
-if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text.toLowerCase().startsWith('.toimg')) {
+if (text.toLowerCase() === '.toim' || text.toLowerCase() === '.toimage' || text.toLowerCase().startsWith('.toim')) {
     if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
         await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
         return;
@@ -1273,7 +1273,7 @@ if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text
     return;
 }
 
-if (text.toLowerCase() === '.tovid') {
+if (text.toLowerCase() === '.toimg') {
     if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
         await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
         return;

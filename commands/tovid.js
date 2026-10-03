@@ -30,7 +30,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
 
     if (!stickerMessage) {
         await sock.sendMessage(sender, {
-            text: '❌ Please send or reply to a sticker with `.tovid`.'
+            text: '❌ Please send or reply to a sticker with `.toimg`.'
         }, { quoted: m });
         return;
     }
