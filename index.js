@@ -66,6 +66,7 @@ const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
 const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
+const handleLoveTest = require('./commands/lovetest');
 const handleMyLove = require('./commands/mylove');
 const handleInsult = require('./commands/insult');
 const { getAiAttachmentParts } = require('./utils/aiAttachments');
@@ -1330,6 +1331,11 @@ if (cleanText === '.flirt' || cleanText.startsWith('.flirt ') ||
     cleanText === '.flirty' || cleanText.startsWith('.flirty ') || 
     cleanText === '.pickuplines' || cleanText.startsWith('.pickuplines ')) {
     await handleFlirt({ sock, m, sender, senderNumber, senderJid, sleep, logBotAction });
+    return;
+}
+
+if (resolveCommandName(text) === 'lovetest') {
+    await handleLoveTest({ sock, m, sender, text });
     return;
 }
 

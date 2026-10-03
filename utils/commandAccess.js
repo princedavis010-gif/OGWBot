@@ -4,7 +4,7 @@ const path = require('path');
 const commandNames = new Set([
     'add', 'admin', 'alive', 'antilink', 'antiviewonce', 'block', 'chat', 'death', 'demote',
     'dare', 'everyone', 'flirt', 'flirty', 'group', 'h', 'imagine', 'kick',
-    'insult', 'life', 'limit', 'list', 'lock', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
+    'insult', 'life', 'limit', 'list', 'lock', 'lovetest', 'marriage', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
     'poll', 'promote', 'public', 'private', 'quote', 'rbg', 'removelimit',
     'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg', 'tovid',
     'trivia', 'tts', 'unblock', 'unlimit', 'unlock', 'unmute', 'vibe', 'welcome',
@@ -27,7 +27,12 @@ const commandAliases = {
     toimage: 'toimg',
     vibe: 'song',
     life: 'quote',
-    death: 'quote'
+    death: 'quote',
+    ship: 'lovetest',
+    compatibility: 'lovetest',
+    shipname: 'lovetest',
+    marige: 'lovetest',
+    marriage: 'lovetest'
 };
 
 const dataDirectory = process.env.BOT_DATA_DIR
