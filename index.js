@@ -1259,32 +1259,43 @@ if (text.toLowerCase().startsWith('.removebg') || text.toLowerCase().startsWith(
     return;
 }
 
-if (text.toLowerCase() === '.toim' || text.toLowerCase() === '.toimage' || text.toLowerCase().startsWith('.toim')) {
+if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text.toLowerCase().startsWith('.toimg')) {
     if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
         await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
         return;
     }
-    const rateLimit = canUseCommand({ command: 'toimg', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
-    if (!rateLimit.allowed) {
-        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
-        return;
-    }
-   // await handleToImg({ sock, m, sender, sleep, getContextInfo });
-    return;
-}
 
-if (text.toLowerCase() === '.toimg') {
-    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
-        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
-        return;
-    }
     const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
     if (!rateLimit.allowed) {
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .tovid again.` }, { quoted: m });
         return;
     }
-    await handleToVid({ sock, m, sender, sleep, getContextInfo });
+
+   /* const rateLimit = canUseCommand({ command: 'toimg', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
+        return;
+    }
+   // await handleToImg({ sock, m, sender, sleep, getContextInfo }); */
+
+      await handleToVid({ sock, m, sender, sleep, getContextInfo });
     return;
+}
+
+if (text.toLowerCase() === '.tovid') {
+    if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
+        await sock.sendMessage(sender, { text: '🛡️ This group is not enabled for sticker conversion actions.' }, { quoted: m });
+        return;
+    }
+
+  /*  const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .tovid again.` }, { quoted: m });
+        return;
+    } 
+
+    await handleToVid({ sock, m, sender, sleep, getContextInfo });
+    return; */
 }
 
 if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
