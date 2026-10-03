@@ -67,6 +67,7 @@ const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
 const handleMyLove = require('./commands/mylove');
 const handleInsult = require('./commands/insult');
+const { getAiAttachmentParts } = require('./utils/aiAttachments');
 const chatHistories = new Map(); // Key: JID, Value: Array of message turns
 const MAX_HISTORY_LENGTH = 15;   // Keeps the last 15 turns to save memory and tokens
 const aiMessageKeys = new Set();
@@ -634,9 +635,13 @@ sock.ev.on('group-participants.update', async (update) => {
 
         // Robust message text extraction (handles ephemeral, view-once, and captions)
         let msgContent = m.message;
-        if (msgContent.ephemeralMessage) msgContent = msgContent.ephemeralMessage.message;
-        if (msgContent.viewOnceMessage) msgContent = msgContent.viewOnceMessage.message;
-        if (msgContent.viewOnceMessageV2) msgContent = msgContent.viewOnceMessageV2.message;
+        while (msgContent?.ephemeralMessage || msgContent?.viewOnceMessage ||
+            msgContent?.viewOnceMessageV2 || msgContent?.documentWithCaptionMessage) {
+            msgContent = msgContent.ephemeralMessage?.message ||
+                msgContent.viewOnceMessage?.message ||
+                msgContent.viewOnceMessageV2?.message ||
+                msgContent.documentWithCaptionMessage?.message;
+        }
 
         let text = '';
         if (msgContent.conversation) {
@@ -647,16 +652,19 @@ sock.ev.on('group-participants.update', async (update) => {
             text = msgContent.imageMessage.caption;
         } else if (msgContent.videoMessage && msgContent.videoMessage.caption) {
             text = msgContent.videoMessage.caption;
+        } else if (msgContent.documentMessage && msgContent.documentMessage.caption) {
+            text = msgContent.documentMessage.caption;
         }
-
-        if (!text) return; // Ignore messages without text
 
         const getContextInfo = () => {
             return msgContent.extendedTextMessage?.contextInfo ||
                    msgContent.imageMessage?.contextInfo ||
-                   msgContent.videoMessage?.contextInfo || null;
+                   msgContent.videoMessage?.contextInfo ||
+                   msgContent.audioMessage?.contextInfo ||
+                   msgContent.documentMessage?.contextInfo || null;
         };
         const contextInfo = getContextInfo();
+        if (!text && !contextInfo?.mentionedJid?.length) continue;
 
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
         if (activityAction) {
@@ -1467,18 +1475,31 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 prompt = text.replace(/@\d+/g, '').trim();
             }
 
+            let attachmentParts;
+            try {
+                attachmentParts = await getAiAttachmentParts({ message: msgContent, contextInfo });
+            } catch (error) {
+                console.error('AI attachment processing failed:', error);
+                await sock.sendMessage(sender, { text: `❌ I couldn't read that attachment: ${error.message}` }, { quoted: m });
+                return;
+            }
+
             // If tagged or triggered with nothing else
             if (!prompt) {
-                await sock.sendPresenceUpdate('composing', sender);
-                const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
-                if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id); // 👈 Track AI message ID
-                return;
+                if (attachmentParts.length) {
+                    prompt = "Please inspect the attached file and answer the user's question if one is included. Otherwise, briefly describe what you can determine from it.";
+                } else {
+                    await sock.sendPresenceUpdate('composing', sender);
+                    const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
+                    if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id);
+                    return;
+                }
             }
 
             // 👇 CHECK IF USER WANTS AN IMAGE NATIVELY USING OG
             const isImageRequest = /\b(draw|generate|paint|create an image|create a picture|pic of|photo of|image of)\b/i.test(prompt);
 
-            if (isImageRequest) {
+            if (isImageRequest && attachmentParts.length === 0) {
                 let imagePrompt = prompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
                 if (!imagePrompt) imagePrompt = "A futuristic Lagos skyline";
 
@@ -1502,7 +1523,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             // Otherwise, handle regular text chat
             try {
-                const replyText = await getAiResponse(prompt);
+                const replyText = await getAiResponse(prompt, attachmentParts);
 
                 const sentMsg = await sock.sendMessage(sender, { text: replyText }, { quoted: m });
                 

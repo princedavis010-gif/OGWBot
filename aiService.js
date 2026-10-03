@@ -63,10 +63,13 @@ When the user replies with their answer, check if they are correct.
 /**
  * Generates a text response through Google Gemini Chat (with full conversation memory).
  */
-async function getAiResponse(prompt) {
+async function getAiResponse(prompt, attachmentParts = []) {
     try {
         const chat = getChatSession();
-        const response = await chat.sendMessage({ message: prompt });
+        const message = attachmentParts.length
+            ? [...attachmentParts, { text: prompt }]
+            : prompt;
+        const response = await chat.sendMessage({ message });
         
         await sleep(500);
         const answer = response.text;
