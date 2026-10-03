@@ -186,7 +186,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
             video: videoBuffer,
             mimetype: 'video/mp4',
             fileName: 'sticker.mp4',
-            caption: '🎬 Converted to MP4 video.'
+           // caption: '🎬 Converted to MP4 video.'
         }, { quoted: m });
     } catch (error) {
         console.error('Video sticker conversion error:', error);
