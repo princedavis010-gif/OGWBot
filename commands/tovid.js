@@ -30,7 +30,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
 
     if (!stickerMessage) {
         await sock.sendMessage(sender, {
-            text: '❌ Please send or reply to an animated/video sticker with `.tovid`.'
+            text: '❌ Please send or reply to a sticker with `.tovid`.'
         }, { quoted: m });
         return;
     }
@@ -48,9 +48,13 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
             stickerBuffer.includes(Buffer.from('ANIM')) ||
             stickerBuffer.includes(Buffer.from('ANMF'));
 
+        // AUTOMATED FALLBACK: If it's a static sticker, convert it to an image instead
         if (!isVideoSticker && !isAnimatedWebp) {
+            const pngBuffer = await sharp(stickerBuffer).png().toBuffer();
             await sock.sendMessage(sender, {
-                text: '❌ This is a static sticker. Use `.toimg` to convert it to an image.'
+                image: pngBuffer,
+                mimetype: 'image/png',
+                caption: '📸 Static sticker converted to Image.'
             }, { quoted: m });
             return;
         }
@@ -65,7 +69,9 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
         } else {
             inputPath = path.join(tempDir, 'input.gif');
             const gifBuffer = await sharp(stickerBuffer, { animated: true })
-                .gif({ loop: 0, delay: 100 })
+                // Flatten transparent background frames onto black so FFmpeg's GIF reader doesn't corrupt/glitch
+                .flatten({ background: { r: 0, g: 0, b: 0 } })
+                .gif({ loop: 0 }) // Let native timelines dictate frame timing
                 .toBuffer();
             fs.writeFileSync(inputPath, gifBuffer);
         }
@@ -96,7 +102,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
     } catch (error) {
         console.error('Video sticker conversion error:', error);
         await sock.sendMessage(sender, {
-            text: '❌ Failed to convert the animated/video sticker to MP4.'
+            text: '❌ Failed to process the sticker file.'
         }, { quoted: m });
     } finally {
         if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
