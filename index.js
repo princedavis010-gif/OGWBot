@@ -621,7 +621,8 @@ sock.ev.on('group-participants.update', async (update) => {
 
         // If the message was sent by your account (fromMe):
         if (m.key.fromMe) {
-            if (!botMessageKinds.has(m.key.id)) rememberBotMessage(m.key.id);
+            if (botMessageKinds.has(m.key.id)) continue;
+            rememberBotMessage(m.key.id);
             // If the bot itself generated and sent this message, ignore it to prevent infinite loops.
             if (aiMessageKeys.has(m.key.id)) {
                 continue;
@@ -1223,7 +1224,7 @@ if (text.toLowerCase().startsWith('.tts')) {
         }
 
         // 📢 Tagall / Everyone Command Handler
-if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.everyone') || text.trim() === '📢') {
+if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.everyone')) {
     if (!sender.endsWith('@g.us')) {
         await sock.sendMessage(sender, { text: '❌ Tagall only works inside a group.' }, { quoted: m });
         return;
@@ -1241,7 +1242,7 @@ if (text.toLowerCase().startsWith('.tagall') || text.toLowerCase().startsWith('.
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using tagall again.` }, { quoted: m });
         return;
     }
-    await handleTagAll(sock, m, text, sender, sleep, [botJid, botLid]);
+    await handleTagAll(sock, m, text, sender, sleep);
     return;
 }
 

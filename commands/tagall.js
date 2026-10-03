@@ -1,6 +1,6 @@
 // commands/tagall.js
 
-async function handleTagAll(sock, m, text, sender, sleep, botJids = []) {
+async function handleTagAll(sock, m, text, sender, sleep) {
     if (!sender.endsWith('@g.us')) {
         await sleep(1000);
         await sock.sendMessage(sender, { text: "❌ This command can only be used inside a WhatsApp group!" });
@@ -10,12 +10,7 @@ async function handleTagAll(sock, m, text, sender, sleep, botJids = []) {
     try {
         const groupMetadata = await sock.groupMetadata(sender);
         const participants = groupMetadata.participants;
-        const botNumbers = new Set(botJids
-            .filter(Boolean)
-            .map(jid => jid.split('@')[0].split(':')[0]));
-        const memberJids = participants
-            .map(participant => participant.id)
-            .filter(jid => !botNumbers.has(jid.split('@')[0].split(':')[0]));
+        const memberJids = participants.map(p => p.id);
 
         // Dynamically slice depending on which trigger was used
         const trigger = text.toLowerCase().startsWith('.evy') ? '.evy' : '.tagall';
