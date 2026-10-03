@@ -19,6 +19,31 @@ function unwrapMessage(message) {
     return content;
 }
 
+function getNestedErrorCode(error) {
+    let currentError = error;
+    while (currentError) {
+        if (currentError.code) return currentError.code;
+        currentError = currentError.cause;
+    }
+    return null;
+}
+
+async function downloadStickerBuffer(stickerMessage) {
+    const retryableCodes = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT']);
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const stream = await downloadContentFromMessage(stickerMessage, 'sticker');
+            const chunks = [];
+            for await (const chunk of stream) chunks.push(chunk);
+            return Buffer.concat(chunks);
+        } catch (error) {
+            if (!retryableCodes.has(getNestedErrorCode(error)) || attempt === 3) throw error;
+            await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+        }
+    }
+}
+
 async function handleToVid({ sock, m, sender, getContextInfo }) {
     const msgContent = unwrapMessage(m.message) || {};
     const contextInfo = getContextInfo ? getContextInfo() : null;
@@ -37,10 +62,7 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
 
     let tempDir;
     try {
-        const stream = await downloadContentFromMessage(stickerMessage, 'sticker');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        const stickerBuffer = Buffer.concat(chunks);
+        const stickerBuffer = await downloadStickerBuffer(stickerMessage);
         const mimetype = stickerMessage.mimetype || '';
         const isVideoSticker = /^video\//i.test(mimetype);
         const isAnimatedWebp = Boolean(stickerMessage.isAnimated) ||
@@ -102,8 +124,12 @@ async function handleToVid({ sock, m, sender, getContextInfo }) {
         }, { quoted: m });
     } catch (error) {
         console.error('Video sticker conversion error:', error);
+        const errorCode = getNestedErrorCode(error);
+        const message = errorCode === 'ENOTFOUND' || errorCode === 'EAI_AGAIN'
+            ? `❌ WhatsApp media DNS lookup failed (${errorCode}). Check the server's internet/DNS connection and try again.`
+            : '❌ Failed to process the sticker file.';
         await sock.sendMessage(sender, {
-            text: '❌ Failed to process the sticker file.'
+            text: message
         }, { quoted: m });
     } finally {
         if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });

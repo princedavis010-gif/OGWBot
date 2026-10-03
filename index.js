@@ -1265,23 +1265,28 @@ if (text.toLowerCase() === '.toimg' || text.toLowerCase() === '.toimage' || text
         return;
     }
 
-    const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
-    if (!rateLimit.allowed) {
-        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .tovid again.` }, { quoted: m });
-        return;
-    }
-
-await handleToVid({ sock, m, sender, sleep, getContextInfo });
-    return;
-
-   /* const rateLimit = canUseCommand({ command: 'toimg', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    /* To restore static .toimg: uncomment this block and the handleToImg import,
+       then comment out the temporary .tovid block below.
+    const rateLimit = canUseCommand({ command: 'toimg', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
     if (!rateLimit.allowed) {
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
         return;
     }
-   // await handleToImg({ sock, m, sender, sleep, getContextInfo }); */
+
+    await handleToImg({ sock, m, sender, sleep, getContextInfo });
+    return;
+    */
+
+    // TEMPORARY: route .toimg through the video-sticker converter.
+    const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+    if (!rateLimit.allowed) {
+        await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .toimg again.` }, { quoted: m });
+        return;
+    }
+
+    await handleToVid({ sock, m, sender, getContextInfo });
+    return;
 }
-      
 
 if (text.toLowerCase() === '.tovid') {
     if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
@@ -1289,14 +1294,14 @@ if (text.toLowerCase() === '.tovid') {
         return;
     }
 
-  /*  const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
+        const rateLimit = canUseCommand({ command: 'tovid', userId: senderJid, groupId: sender.endsWith('@g.us') ? sender : null, cooldownMs: 30000 });
     if (!rateLimit.allowed) {
         await sock.sendMessage(sender, { text: `⏳ Please wait ${formatCooldownMessage(rateLimit.remaining)} before using .tovid again.` }, { quoted: m });
         return;
-    } 
+        }
 
     await handleToVid({ sock, m, sender, sleep, getContextInfo });
-    return; */
+        return;
 }
 
 if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
