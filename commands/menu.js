@@ -49,7 +49,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ t (truth)
 │ ➜ d (dare)
 │ ➜ .flirt
-│ ➜ .lovetest Ali, Sana
+│ ➜ .ship
 │ ➜ .insult
 
 ┏━━━━━━━━━━━━━━━━━

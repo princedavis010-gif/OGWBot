@@ -21,7 +21,7 @@ async function handleLoveTest({ sock, m, sender, text }) {
 
     if (!names) {
         await sock.sendMessage(sender, {
-            text: '❌ Give me exactly two names (up to 40 characters each). Example: .lovetest Ali, Sana'
+            text: '❌ Give me exactly two names (up to 40 characters each). Example: .lovetest Williams, Lucia'
         }, { quoted: m });
         return;
     }
@@ -31,9 +31,9 @@ async function handleLoveTest({ sock, m, sender, text }) {
     const filledHearts = Math.round(percentage / 20);
     const hearts = `${'❤️'.repeat(filledHearts)}${'🤍'.repeat(5 - filledHearts)}`;
     const statusMessage = percentage > 80
-        ? 'Shaadi ka laddu tod lo! 🎉'
+        ? 'Break open the wedding candy! 🎉'
         : percentage >= 65
-            ? 'Achi jori hy, mashallah 😄'
+            ? 'They are a match made in heaven! 💑'
             : 'Love can grow with a little care 💌';
 
     await sock.sendMessage(sender, {
