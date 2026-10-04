@@ -173,15 +173,19 @@ function connectionStatusMarkup() {
                     if (status.status === 'connected') {
                         element.textContent = '✅ WhatsApp connected successfully' + (status.method ? ' via ' + status.method : '') + '.';
                         element.style.color = '#25D366';
+                        element.style.fontFamily = 'kavoon';
                     } else if (status.status === 'disconnected') {
                         element.textContent = 'WhatsApp disconnected. Reconnecting...';
                         element.style.color = '#ffb84d';
+                        element.style.fontFamily = 'kavoon';
                     } else {
                         element.textContent = 'Waiting for WhatsApp connection' + (status.method ? ' via ' + status.method : '') + '...';
                         element.style.color = '#f0d56b';
+                        element.style.fontFamily = 'kavoon';
                     }
                 } catch (error) {
                     document.getElementById('connection-status').textContent = 'Unable to check WhatsApp connection.';
+                    document.getElementById('connection-status').style.fontFamily = 'kavoon';
                 }
             }
             refreshConnectionStatus();
@@ -1903,7 +1907,6 @@ app.get('/', (req, res) => {
     <div class="container">
         <h2>OG CORE</h2>
                 ${connectionStatusMarkup()}
-                ${ownerNumberSetupMarkup()}
       <!--  <p>If the app did not open, CapCut might not be installed on your device.</p> -->
         <br>
         
@@ -2174,7 +2177,6 @@ app.post('/pair', async (req, res) => {
                 <div class="container">
                     <h2>OG CORE</h2>
                     ${connectionStatusMarkup()}
-                    ${ownerNumberSetupMarkup()}
                     <h3 style="color: rgb(221, 187, 15); font-family: 'Kavoon'; margin-bottom: 5px;">Your Pairing Code:</h3>
                     <div class="code-display">${code?.match(/.{1,4}/g)?.join('-') || code}</div>
                     <p>1. Open WhatsApp on your phone.</p>
