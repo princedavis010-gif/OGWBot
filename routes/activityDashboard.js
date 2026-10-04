@@ -26,6 +26,9 @@ function loginPage(showError) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex, nofollow, noarchive">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
         <title>OG CORE Activity Login</title>
         <style>
             body { margin: 0; padding: 48px 20px; background: linear-gradient(150deg, #0f172a, #1e1b4b); color: #e5e7eb; font: 16px Arial, sans-serif; }
