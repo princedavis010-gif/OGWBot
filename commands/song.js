@@ -5,7 +5,7 @@ const ALLOWED_USERS = [
 ];
 
 const yt = require('@vreden/youtube_scraper');
-const MAX_SECONDS = 4000; // ~6 minutes max (guarantees file stays under 5MB)
+const MAX_SECONDS = 400; // ~6 minutes max (guarantees file stays under 5MB)
 
 // 📊 In-memory tracking for usage limit until bot restarts
 const userUsageCounts = new Map();
