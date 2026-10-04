@@ -7,7 +7,7 @@ function getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber 
     if (normalizedText === 'i want it') return 'taker';
     if (normalizedText.startsWith('custom..')) return 'flog';
     if (normalizedText.startsWith('play me')) return 'song';
-    if (normalizedText.startsWith('$img') || normalizedText.startsWith('gen') || normalizedText.startsWith('hey og')) return 'AI chat';
+    if (normalizedText.startsWith('$img') || normalizedText.startsWith('gen') || normalizedText.startsWith('og')) return 'AI chat';
 
     const botNumbers = [getSenderNumber(botJid), getSenderNumber(botLid)].filter(Boolean);
     if (contextInfo?.mentionedJid?.some((jid) => botNumbers.includes(getSenderNumber(jid)))) {

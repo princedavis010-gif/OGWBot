@@ -1609,7 +1609,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
         isQuotingBot = Boolean(repliedBotMessageKind);
         if (repliedBotMessageKind === 'command') return;
 
-        const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('hey og');
+        const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('og');
 
         if (isAiTriggered) {
             if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
@@ -1630,7 +1630,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             let prompt = text;
 
-            if (text.toLowerCase().startsWith('hey og')) {
+            if (text.toLowerCase().startsWith('og')) {
                 prompt = text.slice(6).trim();
                 if (prompt.startsWith(',')) {
                     prompt = prompt.slice(1).trim();
