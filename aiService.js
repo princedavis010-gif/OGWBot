@@ -6,7 +6,8 @@ const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Replace
 
 let ai;
-let chatSession;
+const chatSessions = new Map();
+const MAX_CHAT_SESSIONS = 500;
 
 const executeBotCommandDeclaration = {
     name: 'execute_bot_command',
@@ -51,11 +52,16 @@ function getAiClient() {
 /**
  * Initializes and caches the persistent Gemini chat session for memory.
  */
-function getChatSession() {
-    if (chatSession) return chatSession;
+function getChatSession(conversationId = 'default') {
+    const existingSession = chatSessions.get(conversationId);
+    if (existingSession) {
+        chatSessions.delete(conversationId);
+        chatSessions.set(conversationId, existingSession);
+        return existingSession;
+    }
 
     const aiClient = getAiClient();
-    chatSession = aiClient.chats.create({
+    const chatSession = aiClient.chats.create({
         model: 'gemini-3.5-flash-lite',
         config: {
             systemInstruction: `Your name is OG Core but you preferred to be called Itachi.
@@ -92,15 +98,20 @@ When the user replies with their answer, check if they are correct.
         }
     });
 
+    chatSessions.set(conversationId, chatSession);
+    if (chatSessions.size > MAX_CHAT_SESSIONS) {
+        chatSessions.delete(chatSessions.keys().next().value);
+    }
+
     return chatSession;
 }
 
 /**
  * Generates a text response through Google Gemini Chat (with full conversation memory).
  */
-async function getAiResponse(prompt, attachmentParts = [], executeCommand) {
+async function getAiResponse(prompt, attachmentParts = [], executeCommand, conversationId = 'default') {
     try {
-        const chat = getChatSession();
+        const chat = getChatSession(conversationId);
         const message = attachmentParts.length
             ? [...attachmentParts, { text: prompt }]
             : prompt;
