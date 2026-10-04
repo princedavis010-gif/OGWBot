@@ -33,18 +33,20 @@ function loginPage(showError) {
         <style>
             body { margin: 0; padding: 48px 20px; background: linear-gradient(150deg, #0f172a, #1e1b4b); color: #e5e7eb; font: 16px Arial, sans-serif; }
             main { max-width: 420px; margin: 0 auto; padding: 28px; background: rgba(30, 27, 75, .55); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; }
-            h1 { margin-top: 0; color: #ddbb0f; font-size: 26px; font-family: Kavoon; }
+            h2 { margin-top: 0; color: #ddbb0f; font-size: 26px; font-family: Kavoon; }
             label { display: block; margin: 18px 0 7px; color: #13dd96; }
             input { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #475569; border-radius: 6px; background: #1e293b; color: #fff; }
             button { width: 100%; margin-top: 16px; padding: 12px; border: 0; border-radius: 6px; background: #25d366; color: #fff; font-weight: 700; cursor: pointer; }
             .error { color: #ff8e8e; }
         </style>
-    </head><body><main>
+    </head><body>
         <h1>OG CORE Activity</h1>
-        ${showError ? '<p class="error">Incorrect dashboard password.</p>' : ''}
-        <form action="/admin/activity/login" method="POST">
-            <label for="password">Dashboard password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <main>
+            <h2>OG CORE Activity</h2>
+            ${showError ? '<p class="error">Incorrect dashboard password.</p>' : ''}
+            <form action="/admin/activity/login" method="POST">
+                <label for="password">Dashboard password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
             <button type="submit">Sign in</button>
         </form>
     </main></body></html>`;
