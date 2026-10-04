@@ -45,7 +45,7 @@ async function handlePromote(sock, m, text, sender, sleep) {
 
                 `                     *『 GROUP PROMOTION 』*\n
 👑 *_Congratulations @${targetJid.split('@')[0]}!_*\n
-You have been promoted to admin in ${groupName}}! 🎉\n
+You have been promoted to admin in *${groupName}!* 🎉\n
 Please use your powers responsibly. 🌚\n
 > *𝓞𝓖 𝓒𝓞𝓡𝓔*`,
 
