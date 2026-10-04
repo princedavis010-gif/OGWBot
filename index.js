@@ -1903,6 +1903,7 @@ app.get('/', (req, res) => {
     <div class="container">
         <h2>OG CORE</h2>
                 ${connectionStatusMarkup()}
+                ${ownerNumberSetupMarkup()}
       <!--  <p>If the app did not open, CapCut might not be installed on your device.</p> -->
         <br>
         
