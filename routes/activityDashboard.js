@@ -35,6 +35,7 @@ function loginPage(showError) {
                 margin: 0;
                 padding: 50px 20px;
                 background-attachment: fixed;
+                padding: 50px 20px;
                 background: linear-gradient(150deg, #0f172a, #1e1b4b);
                 color: #e5e7eb; font: 16px Arial, sans-serif;
              }
