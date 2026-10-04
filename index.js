@@ -163,7 +163,7 @@ function trackOutgoingMessages(sock) {
 }
 
 function connectionStatusMarkup() {
-    return `<p id="connection-status" role="status">Checking WhatsApp connection...</p>
+    return `<p font-family="kavoon" id="connection-status" role="status">Checking WhatsApp connection...</p>
         <script>
             async function refreshConnectionStatus() {
                 try {
