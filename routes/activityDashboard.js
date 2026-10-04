@@ -99,7 +99,7 @@ function loginPage(showError) {
         <h1>OG CORE</h1>
         <main>
             <h2>Activity Dashboard</h2>
-            ${showError ? '<p class="error">Incorrect dashboard password.</p>' : ''}
+            ${showError ? '<p class="error">𝙸𝙽𝙲𝙾𝚁𝚁𝙴𝙲𝚃 𝙿𝙰𝚂𝚂𝚆𝙾𝚁𝙳.</p>' : ''}
             <form action="/admin/activity/login" method="POST">
                 <label for="password"></label>
                 <input id="password" placeholder="Password" name="password" type="password" autocomplete="current-password" required>
@@ -116,10 +116,30 @@ function dashboardPage() {
         <meta name="robots" content="noindex, nofollow, noarchive">
         <title>OG CORE Activity</title>
         <style>
-            :root { color-scheme: dark; }
-            body { margin: 0; padding: 28px; background: linear-gradient(150deg, #0f172a, #1e1b4b); color: #e5e7eb; font: 14px Arial, sans-serif; }
-            main { max-width: 1100px; margin: 0 auto; }
-            header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.18); }
+            :root {
+                color-scheme: dark;
+             }
+
+            body { 
+                margin: 0; 
+                padding: 28px; 
+                background-image: linear-gradient(150deg, #0f172a, #1e1b4b); color: #e5e7eb; 
+                font: 14px Arial, sans-serif;
+             }
+
+            main { 
+                max-width: 1100px;
+                margin: 0 auto;
+             }
+
+            header { 
+                display: flex;
+                flex-wrap: wrap; 
+                align-items: center; 
+                justify-content: space-between; 
+                gap: 16px; 
+                padding-bottom: 18px; 
+                border-bottom: 1px solid rgba(255,255,255,.18); }
             h1 { margin: 0; color: #ddbb0f; font-size: 28px; }
             .status { color: #13dd96; }
             .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0; }
