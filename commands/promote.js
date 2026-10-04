@@ -8,9 +8,9 @@ async function handlePromote(sock, m, text, sender, sleep) {
     }
 
     // Extract contextInfo safely from the message object
-    const contextInfo = m.message?.extendedTextMessage?.contextInfo || 
-                        m.message?.imageMessage?.contextInfo || 
-                        m.message?.videoMessage?.contextInfo;
+    const contextInfo = m.message?.extendedTextMessage?.contextInfo ||
+        m.message?.imageMessage?.contextInfo ||
+        m.message?.videoMessage?.contextInfo;
 
     const mentionedJids = contextInfo?.mentionedJid || [];
     let targetJid = mentionedJids[0];
@@ -29,17 +29,28 @@ async function handlePromote(sock, m, text, sender, sleep) {
     try {
         await sleep(1000);
         await sock.groupParticipantsUpdate(sender, [targetJid], 'promote');
-        await sock.sendMessage(sender, { 
+
+        let groupName = "this group";
+        try {
+            const metadata = await sock.groupMetadata(sender);
+            groupName = metadata.subject;
+        }
+
+        catch (error) {
+            console.error("Failed to fetch group metadata for kick:", error);
+        }
+
+        await sock.sendMessage(sender, {
             text:
 
-            `                     *『 GROUP PROMOTION 』*\n
+                `                     *『 GROUP PROMOTION 』*\n
 👑 *_Congratulations @${targetJid.split('@')[0]}!_*\n
-You have been promoted to admin in 𝓣𝓗𝓔 𝓔𝓛𝓘𝓣𝓔 𝓗𝓤𝓑! 🎉\n
+You have been promoted to admin in ${groupName}}! 🎉\n
 Please use your powers responsibly. 🌚\n
 > *𝓞𝓖 𝓒𝓞𝓡𝓔*`,
-            
+
             // `Congratulations @${targetJid.split('@')[0]} 🎉 , you're now an admin!`, 
-            mentions: [targetJid] 
+            mentions: [targetJid]
         }, { quoted: m });
     } catch (error) {
         console.error("Promote error:", error);

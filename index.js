@@ -1669,7 +1669,7 @@ async function connectToWhatsApp() {
                                 prompt = 'Please respond to the message I am replying to.';
                             } else {
                                 await withAiTyping(sock, sender, async () => { });
-                                const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
+                                const sentMsg = await sock.sendMessage(sender, { text: "Hwfar bro" }, { quoted: m });
                                 if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id);
                                 return;
                             }
