@@ -110,62 +110,151 @@ function loginPage(showError) {
 
 function dashboardPage() {
     return `<!doctype html>
-    <html lang="en"><head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="robots" content="noindex, nofollow, noarchive">
-        <title>OG CORE Activity</title>
-        <style>
-            :root {
-                color-scheme: dark;
-             }
+<html lang="en">
 
-            body { 
-                margin: 0; 
-                padding: 28px; 
-                background-image: linear-gradient(150deg, #0f172a, #1e1b4b); color: #e5e7eb; 
-                font: 14px Arial, sans-serif;
-             }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+    <title>OG CORE Activity Dashboard</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
 
-            main { 
-                max-width: 1100px;
-                margin: 0 auto;
-             }
+        body {
+            margin: 0;
+            padding: 28px;
+            backgrouns-attachment: fixed;
+            background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+            color: #e5e7eb;
+            font: 14px Arial, sans-serif;
+        }
 
-            header { 
-                display: flex;
-                flex-wrap: wrap; 
-                align-items: center; 
-                justify-content: space-between; 
-                gap: 16px; 
-                padding-bottom: 18px; 
-                border-bottom: 1px solid rgba(255,255,255,.18); }
-            h1 { margin: 0; color: #ddbb0f; font-size: 28px; }
-            .status { color: #13dd96; }
-            .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0; }
-            input[type=search] { flex: 1; min-width: 220px; padding: 10px 12px; border: 1px solid #475569; border-radius: 6px; background: #1e293b; color: white; }
-            button { padding: 10px 14px; border: 0; border-radius: 6px; background: #25d366; color: white; font-weight: bold; cursor: pointer; }
-            .table-wrap { overflow-x: auto; }
-            table { width: 100%; border-collapse: collapse; text-align: left; }
-            th, td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.12); white-space: nowrap; }
-            th { color: #13dd96; font-weight: 600; }
-            .muted { color: #aeb8ca; }
-            @media (max-width: 600px) { body { padding: 18px 12px; } h1 { font-size: 23px; } }
-        </style>
-    </head><body><main>
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, .18);
+        }
+
+        h1 {
+            margin: 0;
+            color: #ddbb0f;
+            font-size: 28px;
+            font-family: 'Kavoon', system-ui;
+        }
+
+        .status {
+            color: #13dd96;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        input[type=search] {
+            flex: 1;
+            min-width: 220px;
+            padding: 10px 12px;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            background: #1e293b;
+            color: white;
+        }
+
+        button {
+            padding: 10px 14px;
+            border: 0;
+            border-radius: 6px;
+            background: #25d366;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 11px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, .12);
+            white-space: nowrap;
+        }
+
+        th {
+            color: #13dd96;
+            font-weight: 600;
+        }
+
+        .muted {
+            color: #aeb8ca;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 18px 12px;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
         <header>
-            <h1>OG CORE Activity</h1>
-            <div><span id="connection" class="status">Loading status...</span> <span id="uptime" class="muted"></span></div>
+            <h1>OG CORE Activity Dashboard</h1>
+            <div><span id="connection" class="status">Loading status...</span> <span id="uptime" class="muted"></span>
+            </div>
         </header>
         <div class="toolbar">
-            <input id="filter" type="search" placeholder="Filter by user, action, or group" aria-label="Filter activity">
+            <input id="filter" type="search" placeholder="Filter by user, action, or group"
+                aria-label="Filter activity">
             <span id="updated" class="muted">Loading activity...</span>
             <form action="/admin/activity/logout" method="POST"><button type="submit">Sign out</button></form>
         </div>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Chat</th><th>Group</th></tr></thead>
-                <tbody id="events"><tr><td class="muted" colspan="5">Loading...</td></tr></tbody>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Chat</th>
+                        <th>Group</th>
+                    </tr>
+                </thead>
+                <tbody id="events">
+                    <tr>
+                        <td class="muted" colspan="5">Loading...</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </main>
@@ -218,7 +307,10 @@ function dashboardPage() {
         filterInput.addEventListener('input', renderEvents);
         refreshActivity();
         setInterval(refreshActivity, 5000);
-    </script></body></html>`;
+    </script>
+</body>
+
+</html>`;
 }
 
 function registerActivityDashboard(app, { redis, password, getConnectionStatus, getOwnerNumber, getBotNumbers }) {
