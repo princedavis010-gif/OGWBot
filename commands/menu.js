@@ -46,7 +46,6 @@ async function handleMenu({ sock, m, sender, sleep }) {
 ┏━━━━━━━━━━━━━━━━━
 ┃ 🎭 FUN & GAMES
 ┗━━━━━━━━━━━━━━━━━
-│ ➜ .trivia
 │ ➜ t (truth)
 │ ➜ d (dare)
 │ ➜ .flirt

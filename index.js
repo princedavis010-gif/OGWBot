@@ -52,7 +52,6 @@ const handleAdd = require('./commands/add');
 const handleToVid = require('./commands/tovid');
 const handleWelcome = require('./commands/welcome');
 const handleRemoveBg = require('./commands/handleRemoveBg');
-const handleTrivia = require('./commands/trivia');
 const handlePollCommand = require('./commands/poll');
 const handleSong = require('./commands/song');
 const { handleQuoteToggle, isQuoteAiEnabled } = require('./commands/quoteToggle');
@@ -372,7 +371,7 @@ function logBotAction(jid, botMessage) {
     });
 }
 
-const activeTrivia = new Map();
+// const activeTrivia = new Map();
 const SESSION_DIR = path.join(__dirname, 'session');
 const LEGACY_SESSION_DIR = path.join(__dirname, 'auth_info');
 let sessionClearInProgress = false;
@@ -1046,7 +1045,7 @@ async function connectToWhatsApp() {
                     }
 
                     // Check active trivia answers in group chats
-                    if (sender.endsWith('@g.us') && activeTrivia.has(sender)) {
+               /*     if (sender.endsWith('@g.us') && activeTrivia.has(sender)) {
                         const trivia = activeTrivia.get(sender);
                         const cleanText = text.toLowerCase().trim();
 
@@ -1062,7 +1061,7 @@ async function connectToWhatsApp() {
                             }, { quoted: m });
                             return;
                         }
-                    }
+                    } */
 
                     // 👢 .kick Command (Group Admin Only)
                     // 🥾 Kick Command Handler
@@ -1224,13 +1223,6 @@ async function connectToWhatsApp() {
                         for (const pollCommand of pollCommands) {
                             await handlePollCommand({ sock, m, text: pollCommand, sender, sleep });
                         }
-                        return;
-                    }
-
-                    // 🧠 .trivia Command (Interactive Group Quiz Game)
-                    // 🧠 .trivia Command Trigger
-                    if (text.toLowerCase() === '.trivia') {
-                        await handleTrivia({ sock, m, sender, text, sleep });
                         return;
                     }
 
@@ -1582,9 +1574,6 @@ async function connectToWhatsApp() {
                         await handleFlog({ sock, m, sender, senderNumber, senderJid, sleep, getContextInfo });
                         return;
                     }
-
-                    // 🧠 Active Trivia Answer Checker (Group Chats)
-
 
                     // AI Chatbot Trigger: Mentioning the bot, quoting the bot, or typing "Hey OG"
                     if (text.startsWith('.')) return;
