@@ -101,7 +101,7 @@ function loginPage(showError) {
             <h2>Activity Dashboard</h2>
             ${showError ? '<p class="error">Incorrect dashboard password.</p>' : ''}
             <form action="/admin/activity/login" method="POST">
-                <label for="password">Dashboard password</label>
+               <!-- <label for="password">Dashboard password</label> >
                 <input id="password" placeholder="Password" name="password" type="password" autocomplete="current-password" required>
             <button type="submit">Sign in</button>
         </form>
