@@ -782,6 +782,7 @@ sock.ev.on('group-participants.update', async (update) => {
                    msgContent.audioMessage?.contextInfo ||
                    msgContent.documentMessage?.contextInfo || null;
         };
+        
         const contextInfo = getContextInfo();
         if (!text && !contextInfo?.mentionedJid?.length && !contextInfo?.stanzaId) continue;
 
