@@ -1,48 +1,8 @@
 // commands/sticker.js
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { promisify } = require('util');
-const { execFile } = require('child_process');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
-const ffmpegPath = require('ffmpeg-static');
 const addExifToWebp = require('../utils/stickerExif');
-
-const execFileAsync = promisify(execFile);
-
-async function createStickerFromVideo(videoBuffer) {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sticker-video-'));
-    const inputPath = path.join(tempDir, 'input.mp4');
-    // Changed output format to webp to let FFmpeg render the full animation frames
-    const outputImagePath = path.join(tempDir, 'animation.webp');
-
-    fs.writeFileSync(inputPath, videoBuffer);
-
-    await execFileAsync(ffmpegPath, [
-        '-y',
-        '-i', inputPath,
-        '-ss', '0',
-        '-t', '4', // WhatsApp animated stickers must be under 5 seconds (4s is safer for file size)
-        '-vf', "scale='min(512,iw*512/ih)':'min(512,ih*512/iw)',pad=512:512:(512-iw)/2:(512-ih)/2:color=black@0", 
-        '-loop', '0', // Infinite loops are required for animated stickers
-        '-vcodec', 'libwebp',
-        '-an', // Strips audio track to heavily compress the file size
-        outputImagePath
-    ]);
-
-    // Read the animated webp file using the multi-frame { animated: true } option in Sharp
-    const stickerBuffer = await sharp(outputImagePath, { animated: true })
-        .webp({ 
-            quality: 70,       // Dropped slightly from 80 because animations carry large payloads (>1MB gets blocked by WhatsApp)
-            effort: 4, 
-            lossless: false 
-        })
-        .toBuffer();
-
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    return stickerBuffer;
-}
+const { createAnimatedStickerFromVideo } = require('../utils/videoSticker');
 
 async function createStickerFromImage(imageBuffer) {
     return sharp(imageBuffer)
@@ -102,7 +62,7 @@ async function handleSticker(sock, m, text, sender, sleep) {
         }
 
         const stickerBuffer = mediaType === 'video'
-            ? await createStickerFromVideo(buffer)
+            ? await createAnimatedStickerFromVideo(buffer)
             : await createStickerFromImage(buffer);
         const args = text ? text.trim().split(/ +/).slice(1) : [];
         const packName = args.length > 0 ? args.join(' ') : 'Prince Davis';

@@ -1,6 +1,19 @@
 const sharp = require('sharp');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const addExifToWebp = require('../utils/stickerExif');
+const { createAnimatedStickerFromVideo } = require('../utils/videoSticker');
+
+function unwrapMessage(message) {
+    let content = message;
+    while (content?.ephemeralMessage || content?.viewOnceMessage ||
+        content?.viewOnceMessageV2 || content?.documentWithCaptionMessage) {
+        content = content.ephemeralMessage?.message ||
+            content.viewOnceMessage?.message ||
+            content.viewOnceMessageV2?.message ||
+            content.documentWithCaptionMessage?.message;
+    }
+    return content || {};
+}
 
 module.exports = {
     name: 'scr',
@@ -8,57 +21,70 @@ module.exports = {
 
     async handle(sock, m, { from, quoted, text = '' }) {
         try {
-            const msgContent = m.message?.ephemeralMessage?.message ||
-                m.message?.viewOnceMessage?.message ||
-                m.message?.viewOnceMessageV2?.message ||
-                m.message;
+            const msgContent = unwrapMessage(m.message);
 
             const contextInfo = msgContent?.extendedTextMessage?.contextInfo ||
                 msgContent?.imageMessage?.contextInfo ||
                 msgContent?.videoMessage?.contextInfo;
 
-            let targetMessage = msgContent?.imageMessage || null;
+            let targetMessage = null;
+            let mediaType = null;
+            if (msgContent.imageMessage) {
+                targetMessage = msgContent.imageMessage;
+                mediaType = 'image';
+            } else if (msgContent.videoMessage) {
+                targetMessage = msgContent.videoMessage;
+                mediaType = 'video';
+            }
 
             if (!targetMessage && contextInfo?.quotedMessage) {
-                let quotedMessage = contextInfo.quotedMessage;
-                if (quotedMessage.ephemeralMessage) quotedMessage = quotedMessage.ephemeralMessage.message;
-                if (quotedMessage.viewOnceMessage) quotedMessage = quotedMessage.viewOnceMessage.message;
-                if (quotedMessage.viewOnceMessageV2) quotedMessage = quotedMessage.viewOnceMessageV2.message;
-                targetMessage = quotedMessage.imageMessage || null;
+                const quotedMessage = unwrapMessage(contextInfo.quotedMessage);
+                if (quotedMessage.imageMessage) {
+                    targetMessage = quotedMessage.imageMessage;
+                    mediaType = 'image';
+                } else if (quotedMessage.videoMessage) {
+                    targetMessage = quotedMessage.videoMessage;
+                    mediaType = 'video';
+                }
             }
 
             if (!targetMessage && quoted) {
-                let quotedMessage = quoted;
-                if (quotedMessage.ephemeralMessage) quotedMessage = quotedMessage.ephemeralMessage.message;
-                if (quotedMessage.viewOnceMessage) quotedMessage = quotedMessage.viewOnceMessage.message;
-                if (quotedMessage.viewOnceMessageV2) quotedMessage = quotedMessage.viewOnceMessageV2.message;
-                targetMessage = quotedMessage.imageMessage || null;
+                const quotedMessage = unwrapMessage(quoted);
+                if (quotedMessage.imageMessage) {
+                    targetMessage = quotedMessage.imageMessage;
+                    mediaType = 'image';
+                } else if (quotedMessage.videoMessage) {
+                    targetMessage = quotedMessage.videoMessage;
+                    mediaType = 'video';
+                }
             }
 
             if (!targetMessage) {
                 return await sock.sendMessage(from, {
-                    text: '❌ Please send an image with the `.scr` caption or reply to an image with `.scr`.'
+                    text: '❌ Please send an image or video with the `.scr` caption or reply to one with `.scr`.'
                 }, { quoted: m });
             }
 
-            const stream = await downloadContentFromMessage(targetMessage, 'image');
+            const stream = await downloadContentFromMessage(targetMessage, mediaType);
             let buffer = Buffer.from([]);
             for await (const chunk of stream) {
                 buffer = Buffer.concat([buffer, chunk]);
             }
 
-            const croppedBuffer = await sharp(buffer)
-                .resize({
-                    width: 512,
-                    height: 512,
-                    fit: 'cover',
-                    position: 'centre'
-                })
-                .webp({ quality: 80 })
-                .toBuffer();
+            const stickerBuffer = mediaType === 'video'
+                ? await createAnimatedStickerFromVideo(buffer, { fit: 'cover' })
+                : await sharp(buffer)
+                    .resize({
+                        width: 512,
+                        height: 512,
+                        fit: 'cover',
+                        position: 'centre'
+                    })
+                    .webp({ quality: 80 })
+                    .toBuffer();
             const args = text ? text.trim().split(/ +/).slice(1) : [];
             const packName = args.length > 0 ? args.join(' ') : 'Prince Davis';
-            const stickerWithExif = addExifToWebp(croppedBuffer, packName, '');
+            const stickerWithExif = addExifToWebp(stickerBuffer, packName, '');
 
             await sock.sendMessage(from, { sticker: stickerWithExif }, { quoted: m });
 
