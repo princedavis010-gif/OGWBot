@@ -89,7 +89,7 @@ Generate fun, engaging questions (about football games like eFootball/DLS, recen
 Always provide 4 clear multiple-choice options labeled A, B, C, and D.
 When the user replies with their answer, check if they are correct.
     If they get it right, celebrate them heavily! If they fail, roast them and give them the correct answer immediately.`,
-            temperature: 1,
+            temperature: 0.9,
             maxOutputTokens: 300,
             tools: [{ functionDeclarations: [executeBotCommandDeclaration] }],
             toolConfig: {
