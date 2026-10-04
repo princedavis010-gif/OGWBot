@@ -121,19 +121,30 @@ function getMessageText(content) {
     return '';
 }
 
-async function showAiTyping(sock, sender) {
+async function withAiTyping(sock, sender, operation) {
+    const startedAt = Date.now();
     try {
         await sock.sendPresenceUpdate('composing', sender);
     } catch (error) {
         console.error('Could not show AI typing presence:', error);
     }
 
-    await sleep(1500);
+    const refreshTimer = setInterval(() => {
+        Promise.resolve(sock.sendPresenceUpdate('composing', sender)).catch((error) => {
+            console.error('Could not refresh AI typing presence:', error);
+        });
+    }, 10000);
 
     try {
-        await sock.sendPresenceUpdate('paused', sender);
-    } catch (error) {
-        console.error('Could not pause AI typing presence:', error);
+        return await operation();
+    } finally {
+        clearInterval(refreshTimer);
+        await sleep(Math.max(0, 1500 - (Date.now() - startedAt)));
+        try {
+            await sock.sendPresenceUpdate('paused', sender);
+        } catch (error) {
+            console.error('Could not pause AI typing presence:', error);
+        }
     }
 }
 
@@ -1616,10 +1627,11 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             let attachmentParts;
             try {
-                attachmentParts = await getAiAttachmentParts({ message: msgContent, contextInfo });
+                attachmentParts = await withAiTyping(sock, sender, () =>
+                    getAiAttachmentParts({ message: msgContent, contextInfo })
+                );
             } catch (error) {
                 console.error('AI attachment processing failed:', error);
-                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: `❌ I couldn't read that attachment: ${error.message}` }, { quoted: m });
                 return;
             }
@@ -1631,7 +1643,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 } else if (quotedText) {
                     prompt = 'Please respond to the message I am replying to.';
                 } else {
-                    await showAiTyping(sock, sender);
+                    await withAiTyping(sock, sender, async () => {});
                     const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
                     if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id);
                     return;
@@ -1650,13 +1662,11 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 let imagePrompt = userPrompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
                 if (!imagePrompt) imagePrompt = "A futuristic Lagos skyline";
 
-                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: "Calm, you'll get it in a moment..." }, { quoted: m });
 
                 try {
-                    const imageData = await getAiImageResponse(imagePrompt);
+                    const imageData = await withAiTyping(sock, sender, () => getAiImageResponse(imagePrompt));
 
-                    await showAiTyping(sock, sender);
                     const sentMsg = await sock.sendMessage(sender, { 
                         image: imageData.buffer, 
                         caption: `*Here you go as you asked*, *${imagePrompt}*` 
@@ -1665,7 +1675,6 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
                 } catch (imgError) {
                     console.error("Image gen failure:", imgError);
-                    await showAiTyping(sock, sender);
                     await sock.sendMessage(sender, { text: "😭 Emotional Damage. Something went wrong." });
                 }
                 return;
@@ -1673,7 +1682,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             // Otherwise, handle regular text chat
             try {
-                const aiResult = await getAiResponse(prompt, attachmentParts, async (requestedCommand) => {
+                const aiResult = await withAiTyping(sock, sender, () => getAiResponse(prompt, attachmentParts, async (requestedCommand) => {
                     const commandText = String(requestedCommand || '').trim();
                     const commandLines = commandText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
                     const isPollBatch = commandLines.length > 1 && commandLines.every((line) => /^\.poll(?:\s|$)/i.test(line));
@@ -1711,17 +1720,14 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                         isCommandDelivery: true,
                         allowReplies: /^\.insult(?:\s|$)/i.test(commandText) || /^\.welcome(?:\s|$)/i.test(commandText)
                     }, () => {
-                        showAiTyping(sock, sender).then(() => {
-                            sock.ev.emit('messages.upsert', { messages: [commandMessage], type: 'notify' });
-                        });
+                        sock.ev.emit('messages.upsert', { messages: [commandMessage], type: 'notify' });
                     });
 
                     return { executed: true };
-                });
+                }));
                 if (aiResult.commandExecuted) return;
                 const replyText = aiResult.text;
 
-                await showAiTyping(sock, sender);
                 const sentMsg = await sock.sendMessage(sender, { text: replyText }, { quoted: m });
                 
                 // 👈 Track this message ID so you can reply to it for continuous chat
@@ -1735,7 +1741,6 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
 
             } catch (error) {
                 console.error("Gemini API Error:", error);
-                await showAiTyping(sock, sender);
                 await sock.sendMessage(sender, { text: "Calm, one at a time please. 🙂" });
             }
             return;
