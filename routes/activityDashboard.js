@@ -128,7 +128,7 @@ function dashboardPage() {
         body {
             margin: 0;
             padding: 28px;
-            backgrouns-attachment: fixed;
+            background-attachment: fixed;
             background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
             color: #e5e7eb;
             font: 14px Arial, sans-serif;
