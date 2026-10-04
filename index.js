@@ -42,6 +42,7 @@ const handleSticker = require('./commands/sticker');
 const handleTTS = require('./commands/tts');
 const handleUnlock = require('./commands/unlock');
 const handleLock = require('./commands/lock');
+const handleDelete = require('./commands/delete');
 const handleKick = require('./commands/kick');
 const handleDemote = require('./commands/demote');
 const handlePromote = require('./commands/promote'); // Adjust path if needed
@@ -784,6 +785,20 @@ sock.ev.on('group-participants.update', async (update) => {
         const contextInfo = getContextInfo();
         if (!text && !contextInfo?.mentionedJid?.length && !contextInfo?.stanzaId) continue;
 
+        const botNumbers = [getSenderNumber(botJid), getSenderNumber(botLid)].filter(Boolean);
+        const isForwardedBotMention = sender.endsWith('@g.us') &&
+            !isAiGeneratedCommand &&
+            contextInfo?.isForwarded === true &&
+            contextInfo?.mentionedJid?.some((jid) => botNumbers.includes(getSenderNumber(jid)));
+        if (isForwardedBotMention) {
+            try {
+                await sock.sendMessage(sender, { delete: m.key });
+            } catch (error) {
+                console.error('Could not auto-delete forwarded bot mention in group (bot may need admin rights):', error);
+            }
+            continue;
+        }
+
         const activityAction = getActivityAction({ text, contextInfo, botJid, botLid, getSenderNumber });
         const isCommandDelivery = /^\s*\./.test(text) ||
             (activityAction && activityAction !== 'AI chat' && activityAction !== 'AI mention');
@@ -978,6 +993,22 @@ if (sender.endsWith('@g.us') && isUserMuted(sender, senderJid)) {
                     return;
                 }
             }
+        }
+
+        if (commandName === 'delete') {
+            await handleDelete({
+                sock,
+                m,
+                sender,
+                senderJid,
+                contextInfo,
+                botJid,
+                botLid,
+                botPhoneNumber,
+                getSenderNumber,
+                isGroupAdmin
+            });
+            return;
         }
 
         // Print to terminal if logs are enabled
@@ -1645,6 +1676,7 @@ if (text.toLowerCase() === '.s' || text.toLowerCase().startsWith('.s ')) {
                 } else {
                     await withAiTyping(sock, sender, async () => {});
                     const sentMsg = await sock.sendMessage(sender, { text: "Hey! You called? What's on your mind? 😁" }, { quoted: m });
+                    console.log(`Received message: "${text}" from ${sender}`);
                     if (sentMsg?.key?.id) aiMessageKeys.add(sentMsg.key.id);
                     return;
                 }

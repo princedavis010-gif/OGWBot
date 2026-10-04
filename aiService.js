@@ -12,7 +12,7 @@ const executeBotCommandDeclaration = {
     name: 'execute_bot_command',
     description: `Execute one existing OG bot command when the user clearly asks you to perform that action.
                     Supported commands include .add/.addmember, .admin/.group, .antilink, .block/.unblock,
-                    .death/.life, .demote/.promote, .kick, .lock/.unlock, .mute/.unmute, .tagall/.everyone,
+                    .death/.life, .delete, .demote/.promote, .kick, .lock/.unlock, .mute/.unmute, .tagall/.everyone,
                     .welcome/.welcome on/.welcome off, .insult, .flirt/.flirty/.pickuplines, t, d, .trivia,
                     .lovetest/.ship/.compatibility/.shipname/.marige/.marriage, .song/.music/.vibe, .tts, .st/.s, .toimg/.toimage,
                     .tovid, .removebg/.rbg, .imagine/$img/gen, .status, .activity, .list/.help/.h/.chat, .limit/.unlimit/.removelimit,

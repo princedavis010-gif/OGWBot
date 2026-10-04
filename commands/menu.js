@@ -19,6 +19,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .mute 
 │ ➜ .unmute
 │ ➜ .tagall
+│ ➜ .delete (reply to a message)
 │ ➜ .tts
 │ ➜ .poll
 │ ➜ .welcome
