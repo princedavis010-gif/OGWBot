@@ -322,7 +322,7 @@ function dashboardPage() {
             <input id="filter" type="search" placeholder="Filter by user, action, or group"
                 aria-label="Filter activity">
             <span id="updated" class="muted">Loading activity...</span>
-            <form action="/admin" method="POST"><button type="submit">Sign out</button></form>
+            <form action="/admin/login" method="POST"><button type="submit">Back</button></form>
         </div>
         <div class="table-wrap">
             <table>
