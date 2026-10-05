@@ -87,7 +87,7 @@ function loginPage(showError) {
             }
             .error {
                 color: #ff8e8e;
-                text-align: center;
+                <!-- text-align: center; -->
             }
             @media (max-width: 480px) {
                 body { padding: 32px 16px; }
@@ -322,8 +322,7 @@ function dashboardPage() {
             <input id="filter" type="search" placeholder="Filter by user, action, or group"
                 aria-label="Filter activity">
             <span id="updated" class="muted">Loading activity...</span>
-            <a class="admin-link" href="/admin">Admin panel</a>
-            <form action="/admin/logout" method="POST"><button type="submit">Sign out</button></form>
+            <form action="/admin" method="POST"><button type="submit">Sign out</button></form>
         </div>
         <div class="table-wrap">
             <table>
