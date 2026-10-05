@@ -5,7 +5,8 @@ const ALLOWED_USERS = [
 ];
 
 const yt = require('@vreden/youtube_scraper');
-const MAX_SECONDS = 400; // ~6 minutes max (guarantees file stays under 5MB)
+const MAX_SECONDS = 400;
+const MAX_AUDIO_BYTES = 6 * 1024 * 1024;
 
 // 📊 In-memory tracking for usage limit until bot restarts
 const userUsageCounts = new Map();
@@ -14,7 +15,7 @@ const SPECIFIC_USER_LIMITS = {
 };
 
 // Helper to handle timeouts so the bot never hangs indefinitely
-const fetchBufferWithTimeout = async (url, options = {}, timeoutMs = 45000) => {
+const fetchBufferWithTimeout = async (url, options = {}, timeoutMs = 45000, maxBytes = Infinity) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -23,7 +24,39 @@ const fetchBufferWithTimeout = async (url, options = {}, timeoutMs = 45000) => {
             await response.body?.cancel();
             throw new Error(`HTTP ${response.status} while fetching media`);
         }
-        return Buffer.from(await response.arrayBuffer());
+
+        const contentLength = Number(response.headers.get('content-length'));
+        if (contentLength > maxBytes) {
+            await response.body?.cancel();
+            throw new Error('Audio exceeds the 6 MB file-size limit.');
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            const buffer = Buffer.from(await response.arrayBuffer());
+            if (buffer.length > maxBytes) throw new Error('Audio exceeds the 6 MB file-size limit.');
+            return buffer;
+        }
+
+        const chunks = [];
+        let totalBytes = 0;
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                totalBytes += value.byteLength;
+                if (totalBytes > maxBytes) {
+                    await reader.cancel();
+                    throw new Error('Audio exceeds the 6 MB file-size limit.');
+                }
+                chunks.push(Buffer.from(value));
+            }
+        } catch (error) {
+            await reader.cancel().catch(() => {});
+            throw error;
+        }
+
+        return Buffer.concat(chunks, totalBytes);
     } finally {
         clearTimeout(timeout);
     }
@@ -98,15 +131,19 @@ module.exports = async function handleSong({ sock, m, sender, text }) {
 
     try {
         const searchResult = await yt.search(query);
-        const video = searchResult.results?.[0];
-        if (!searchResult.status || !video) {
+        if (!searchResult.status) {
             await sock.sendMessage(chatId, { text: '❌ No results found.' });
             return;
         }
 
-        if (video.seconds && video.seconds > MAX_SECONDS) {
+        const video = searchResult.results?.find((candidate) => {
+            const seconds = Number(candidate.seconds);
+            return candidate.seconds !== undefined && candidate.seconds !== null &&
+                Number.isFinite(seconds) && seconds > 0 && seconds <= MAX_SECONDS;
+        });
+        if (!video) {
             await sock.sendMessage(chatId, {
-                text: `❌ *Download Blocked!*\n\n"${video.title || query}" is *${video.timestamp || `${video.seconds} seconds`}* long.`
+                text: `❌ No matching song was found under ${MAX_SECONDS} seconds. Try a more specific title or artist.`
             });
             return;
         }
@@ -135,7 +172,7 @@ module.exports = async function handleSong({ sock, m, sender, text }) {
         const safeFileName = rawTitle.replace(/[<>:"/\\|?*]/g, '_') + '.mp3';
 
         // Download audio binary with timeout
-        const buffer = await fetchBufferWithTimeout(downloadUrl, {}, 60000);
+        const buffer = await fetchBufferWithTimeout(downloadUrl, {}, 60000, MAX_AUDIO_BYTES);
 
         await previewPromise;
         await sock.sendMessage(chatId, {
