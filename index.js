@@ -821,8 +821,7 @@ async function connectToWhatsApp() {
                             resolveGroupPhone: (participantJids) => getGroupParticipantPhoneNumber(sock, sender, participantJids)
                         });
                         void recordBotActivity(redis, {
-                            userNumber: m.pushName || 'Unknown',
-                          //  userNumber: activityIdentity.phoneNumber,
+                            userNumber: m.pushName || activityIdentity.phoneNumber,
                             userLid: activityIdentity.userLid,
                             chatJid: sender,
                             action: activityAction
