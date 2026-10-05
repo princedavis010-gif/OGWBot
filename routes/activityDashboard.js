@@ -178,11 +178,11 @@ function adminPage() {
     <main class="container">
         <h1>OG CORE</h1>
         <h2>Admin Panel</h2>
-        <a href="/admin/activity" class="btn">Activity Dashboard</a>
+        <a href="/admin/activity" target="_blank" class="btn">Activity Dashboard</a>
         <a href="/" class="btn">Back to Home</a>
-        <form class="logout-form" action="/admin/logout" method="POST">
+      <!--  <form class="logout-form" action="/admin/logout" method="POST">
             <button class="btn" type="submit">Sign out</button>
-        </form>
+        </form> -->
     </main>
 </body>
 </html>`;
