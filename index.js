@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 global.latestQR = null;
 global.whatsappConnection = { status: 'connecting', method: null };
 require('dotenv').config();
-const PUBLIC_BASE_URL = String(process.env.RENDER_EXTERNAL_URL || 'https://og-core.onrender.com').replace(/\/+$/, '');
+const PUBLIC_BASE_URL = String(process.env.RENDER_EXTERNAL_URL || 'https://og-core2c5v.onrender.com').replace(/\/+$/, '');
 const {
     getMode: getCommandAccessMode,
     hasChainedDotCommands,
@@ -1900,12 +1900,12 @@ app.get('/', (req, res) => {
         <br>
         
         <!-- Option 1: Open in the web browser -->
-        <a href="https://og-core.onrender.com/qr" class="btn btn-browser">
+        <a href="https://og-core2c5v.onrender.com/qr" class="btn btn-browser">
             Click here to scan QR
         </a>
         
         <!-- Connect WhatsApp with Pairing Code -->
-        <a href="https://og-core.onrender.com/pair" class="btn btn-playstore" target="_blank">
+        <a href="https://og-core2c5v.onrender.com/pair" class="btn btn-playstore" target="_blank">
             Click here to get Pairing Code
         </a>
     </div>
