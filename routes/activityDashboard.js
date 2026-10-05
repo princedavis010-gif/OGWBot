@@ -29,83 +29,163 @@ function loginPage(showError) {
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
-        <title>OG CORE Activity Login</title>
+        <title>OG CORE Admin Login</title>
         <style>
-            body { 
+            body {
                 margin: 0;
                 padding: 50px 20px;
                 background-attachment: fixed;
                 background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
-                color: #e5e7eb; font: 16px Arial, sans-serif;
-             }
-
-            main { 
+                color: #e5e7eb;
+                font: 16px Arial, sans-serif;
+            }
+            main {
                 max-width: 420px;
                 margin: 0 auto;
                 padding: 28px;
                 background: rgba(30, 27, 75, .55);
                 border: 1px solid rgba(255,255,255,.14);
                 border-radius: 8px;
-             }
-
-            h1 { 
+            }
+            h1 {
                 text-align: center;
                 color: #ddbb0f;
-                font-size: 30px;
+                font-size: 60px;
                 font-family: Rubik Wet Paint, system-ui;
-             }
-
-            h2 { 
+            }
+            h2 {
                 margin-top: 0;
                 color: #ddbb0f;
                 font-size: 26px;
                 font-family: Kavoon, system-ui;
-             }
-
-            label { 
+                text-align: center;
+            }
+            label {
                 display: block;
                 margin: 18px 0 7px;
                 color: #13dd96;
-             }
-
-            input { 
-                box-sizing: border-box; 
-                width: 100%; 
-                padding: 12px; 
-                border: 1px solid #475569; 
-                border-radius: 6px; 
-                background: #1e293b; 
+            }
+            input {
+                box-sizing: border-box;
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #475569;
+                border-radius: 6px;
+                background: #1e293b;
                 color: #fff;
-             }
-
-            button { 
-                width: 100%; 
-                margin-top: 16px; 
-                padding: 12px; 
-                border: 0; 
-                border-radius: 6px; 
-                background: #25d366; 
-                color: #fff; 
-                font-weight: 700; 
+            }
+            button {
+                width: 100%;
+                margin-top: 16px;
+                padding: 12px;
+                border: 0;
+                border-radius: 6px;
+                background: #25d366;
+                color: #fff;
+                font-weight: 700;
                 cursor: pointer;
-             }
-
-            .error { 
+            }
+            .error {
                 color: #ff8e8e;
-             }
-
+                text-align: center;
+            }
+            @media (max-width: 480px) {
+                body { padding: 32px 16px; }
+                h1 { font-size: 48px; }
+                main { padding: 24px; }
+            }
         </style>
     </head><body>
         <h1>OG CORE</h1>
         <main>
-            <h2>Activity Dashboard</h2>
+            <h2>Admin Panel</h2>
             ${showError ? '<p class="error">𝙸𝙽𝙲𝙾𝚁𝚁𝙴𝙲𝚃 𝙿𝙰𝚂𝚂𝚆𝙾𝚁𝙳.</p>' : ''}
-            <form action="/admin/activity/login" method="POST">
-                <label for="password"></label>
+            <form action="/admin/login" method="POST">
+                <label for="password">Password</label>
                 <input id="password" placeholder="Password" name="password" type="password" autocomplete="current-password" required>
-            <button type="submit">Sign in</button>
-        </form>
+                <button type="submit">Sign in</button>
+            </form>
     </main></body></html>`;
+}
+
+function adminPage() {
+    return `<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kavoon&family=Rubik+Doodle+Shadow&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+    <title>OG CORE Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+            color: #e5e7eb;
+            background-attachment: fixed;
+            background-image: linear-gradient(150deg, #0f172a, #1e1b4b);
+            margin: 0;
+        }
+        h1 {
+            color: #ddbb0f;
+            text-shadow: black 1px 1px;
+            font-family: "Rubik Wet Paint", system-ui;
+            font-size: 55px;
+            margin: 0 0 12px;
+        }
+        h2 {
+            color: #ddbb0f;
+            text-shadow: black 2px 2px;
+            font-family: "Rubik Doodle Shadow", system-ui;
+            font-weight: 100;
+            font-size: 25px;
+            margin: 0 0 40px;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 30px;
+            background: rgba(30, 27, 75, .4);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, .1);
+        }
+        .btn {
+            display: block;
+            margin: 15px 0;
+            padding: 12px;
+            border: 0;
+            border-radius: 8px;
+            background: #25d366;
+            color: white;
+            font-family: "Kavoon", system-ui;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn:hover { background: #20ba5a; }
+        .logout-form { margin: 0; }
+        @media (max-width: 480px) {
+            body { padding: 32px 16px; }
+            h1 { font-size: 44px; }
+            .container { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>OG CORE</h1>
+        <h2>Admin Panel</h2>
+        <a href="/admin/activity" class="btn">Activity Dashboard</a>
+        <a href="/" class="btn">Back to Home</a>
+        <form class="logout-form" action="/admin/logout" method="POST">
+            <button class="btn" type="submit">Sign out</button>
+        </form>
+    </main>
+</body>
+</html>`;
 }
 
 function dashboardPage() {
@@ -188,6 +268,11 @@ function dashboardPage() {
             cursor: pointer;
         }
 
+        .admin-link {
+            color: #13dd96;
+            text-decoration: none;
+        }
+
         .table-wrap {
             overflow-x: auto;
         }
@@ -237,7 +322,8 @@ function dashboardPage() {
             <input id="filter" type="search" placeholder="Filter by user, action, or group"
                 aria-label="Filter activity">
             <span id="updated" class="muted">Loading activity...</span>
-            <form action="/admin/activity/logout" method="POST"><button type="submit">Sign out</button></form>
+            <a class="admin-link" href="/admin">Admin panel</a>
+            <form action="/admin/logout" method="POST"><button type="submit">Sign out</button></form>
         </div>
         <div class="table-wrap">
             <table>
@@ -317,20 +403,35 @@ function registerActivityDashboard(app, { redis, password, getConnectionStatus, 
     const isEnabled = password.length >= 32;
     const isAuthenticated = (req) => isEnabled && hasValidSession(req, password);
 
+    app.get('/admin', (req, res) => {
+        res.set('Cache-Control', 'no-store');
+        if (!isEnabled) return res.status(503).send('Admin panel is disabled. Configure ACTIVITY_DASHBOARD_PASSWORD in this deployment.');
+        if (!isAuthenticated(req)) return res.redirect(303, '/admin/login');
+        res.send(adminPage());
+    });
+
+    app.get('/admin/login', (req, res) => {
+        res.set('Cache-Control', 'no-store');
+        if (!isEnabled) return res.status(503).send('Admin panel is disabled. Configure ACTIVITY_DASHBOARD_PASSWORD in this deployment.');
+        if (isAuthenticated(req)) return res.redirect(303, '/admin');
+        res.send(loginPage(req.query.error === '1'));
+    });
+
     app.get('/admin/activity', (req, res) => {
         res.set('Cache-Control', 'no-store');
         if (!isEnabled) return res.status(503).send('Activity dashboard is disabled. Configure ACTIVITY_DASHBOARD_PASSWORD in this deployment.');
-        res.send(isAuthenticated(req) ? dashboardPage() : loginPage(req.query.error === '1'));
+        if (!isAuthenticated(req)) return res.redirect(303, '/admin/login');
+        res.send(dashboardPage());
     });
 
-    app.post('/admin/activity/login', (req, res) => {
+    const login = (req, res) => {
         res.set('Cache-Control', 'no-store');
-        if (!isEnabled) return res.status(503).send('Activity dashboard is disabled. Configure ACTIVITY_DASHBOARD_PASSWORD in this deployment.');
+        if (!isEnabled) return res.status(503).send('Admin panel is disabled. Configure ACTIVITY_DASHBOARD_PASSWORD in this deployment.');
 
         const expected = Buffer.from(password);
         const submitted = Buffer.from(String(req.body.password || ''));
         if (submitted.length !== expected.length || !timingSafeEqual(submitted, expected)) {
-            return res.redirect(303, '/admin/activity?error=1');
+            return res.redirect(303, '/admin/login?error=1');
         }
 
         const expiresAt = String(Date.now() + SESSION_DURATION_MS);
@@ -338,15 +439,21 @@ function registerActivityDashboard(app, { redis, password, getConnectionStatus, 
         const forwardedProtocol = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
         const secureAttribute = req.secure || forwardedProtocol === 'https' ? '; Secure' : '';
         res.set('Set-Cookie', `${SESSION_COOKIE}=${session}; Path=/admin; HttpOnly; SameSite=Strict; Max-Age=1800${secureAttribute}`);
-        res.redirect(303, '/admin/activity');
-    });
+        res.redirect(303, '/admin');
+    };
 
-    app.post('/admin/activity/logout', (req, res) => {
+    app.post('/admin/login', login);
+    app.post('/admin/activity/login', login);
+
+    const logout = (req, res) => {
         const forwardedProtocol = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
         const secureAttribute = req.secure || forwardedProtocol === 'https' ? '; Secure' : '';
         res.set('Set-Cookie', `${SESSION_COOKIE}=; Path=/admin; HttpOnly; SameSite=Strict; Max-Age=0${secureAttribute}`);
-        res.redirect(303, '/admin/activity');
-    });
+        res.redirect(303, '/admin/login');
+    };
+
+    app.post('/admin/logout', logout);
+    app.post('/admin/activity/logout', logout);
 
     app.get('/admin/activity/data', async (req, res) => {
         res.set('Cache-Control', 'no-store');
