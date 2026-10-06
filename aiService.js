@@ -14,9 +14,9 @@ const executeBotCommandDeclaration = {
     description: `Execute one existing OG bot command when the user clearly asks you to perform that action.
                     Supported commands include .add/.addmember, .admin/.group, .antilink, .block/.unblock,
                     .death/.life, .delete, .demote/.promote, .kick, .lock/.unlock, .mute/.unmute, .tagall/.everyone,
-                    .welcome/.welcome on/.welcome off, .flirt/.flirty/.pickuplines, t, d, .lovetest/.ship/.compatibility/.shipname/.marriage,
-                    .song/.music/.vibe, .tts, .st/.s, .toimg/.toimage, .tovid, .removebg/.rbg, .imagine/$img/gen, .status, .activity,
-                    .list/.help/.h/.chat, .limit/.unlimit/.removelimit, .public/.private, .on/.off, .restart/.logout/.clearsession/.kill, .vv/.antiviewonce,
+                    .welcome/.welcome on/.welcome off, .flirt/.flirty/.pickuplines, t, d, .song/.music/.vibe, .tts, .st/.s,
+                    .toimg/.toimage, .tovid, .removebg/.rbg, .imagine/$img/gen, .status, .activity, .list/.help/.h/.chat,
+                    .limit/.unlimit/.removelimit, .public/.private, .on/.off, .restart/.logout/.clearsession/.kill, .vv/.antiviewonce,
                     .scr, .mylove, .poll, and .command <command> .self/.public.
                     Include the full command and its arguments in command_text.
                     When asked to tag one single person, you don't need to tag all. Follow commands exactly as they are laid.
