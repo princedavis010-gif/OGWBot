@@ -1685,7 +1685,7 @@ async function connectToWhatsApp() {
                         }
 
                         // 👇 CHECK IF USER WANTS AN IMAGE NATIVELY USING OG
-                        const isImageRequest = /\b(draw|generate|paint|create an image|create a picture|pic of|photo of|image of)\b/i.test(userPrompt);
+                 /*       const isImageRequest = /\b(draw|generate|paint|create an image|create a picture|pic of|photo of|image of)\b/i.test(userPrompt);
 
                         if (isImageRequest && attachmentParts.length === 0) {
                             let imagePrompt = userPrompt.replace(/\b(draw|generate an image of|paint|create a picture of)\b/i, '').trim();
@@ -1706,8 +1706,8 @@ async function connectToWhatsApp() {
                                 console.error("Image gen failure:", imgError);
                                 await sock.sendMessage(sender, { text: "😭 Emotional Damage. Something went wrong." });
                             }
-                            return;
-                        }
+                            return; 
+                        } */
 
                         // Otherwise, handle regular text chat
                         try {
