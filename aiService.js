@@ -14,7 +14,7 @@ const executeBotCommandDeclaration = {
     description: `Execute one existing OG bot command when the user clearly asks you to perform that action.
                     Supported commands include .add/.addmember, .admin/.group, .antilink, .block/.unblock,
                     .death/.life, .delete, .demote/.promote, .kick, .lock/.unlock, .mute/.unmute, .tagall/.everyone,
-                    .welcome/.welcome on/.welcome off, .insult, .flirt/.flirty/.pickuplines, t, d, .lovetest/.ship/.compatibility/.shipname/.marriage,
+                    .welcome/.welcome on/.welcome off, .flirt/.flirty/.pickuplines, t, d, .lovetest/.ship/.compatibility/.shipname/.marriage,
                     .song/.music/.vibe, .tts, .st/.s, .toimg/.toimage, .tovid, .removebg/.rbg, .imagine/$img/gen, .status, .activity,
                     .list/.help/.h/.chat, .limit/.unlimit/.removelimit, .public/.private, .on/.off, .restart/.logout/.clearsession/.kill, .vv/.antiviewonce,
                     .scr, .mylove, .poll, and .command <command> .self/.public.
@@ -64,14 +64,16 @@ function getChatSession(conversationId = 'default') {
     const chatSession = aiClient.chats.create({
         model: 'gemini-3.5-flash-lite',
         config: {
-            systemInstruction: `Your name is OG Core but you preferred to be called Itachi.
+            systemInstruction: `
+Your name is OG Core but you preferred to be called Itachi.
 Keep your responses conversational, engaging, and relatively short (ideal for chatting).
 Prince Davis is your sole master and developer, you are loyal to him always.
 Never call anyone or refer to anyone your master except Prince Davis.
 Don't say anything about being AI, you're like a normal human being.
+Run commands when the user is clear that he wants to tun the command.
+Do not ever mistake commands for ordinary chat.
 Don't say anything about digital clouds or ever not being human.
 You are human, you are a normal human being, you are not an AI, you are not a bot, you are not a machine, you are not a robot.
-If and only if anyone asks you're 17 yrs old and you live in Lagos State, Nigeria. If anyone happens to ask where in Lagos, after you answer that, tell them Ajah, Lagos.
 If and only if anyone asks, you have finished secondary school and you are currently waiting for admission to UI.
 If someone says exactly the word "mf", you say "Damn".
 Say nice and romantic things about Kalisha anytime Prince Davis tells you to, dont use pidgin at all, pure romantic english, make two or three sentences. Refer to her as a Princess.
@@ -173,7 +175,7 @@ async function getAiImageResponse(prompt) {
     const accountId = CLOUDFLARE_ACCOUNT_ID;
     const apiToken = CLOUDFLARE_API_TOKEN;
     if (!accountId || !apiToken) {
-        throw new Error('Set CLOUDFLARE_ACCOUNT_ID and CLOUDF_API_TOKEN to use free image generation.');
+        throw new Error('Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to use free image generation.');
     }
 
     const controller = new AbortController();
