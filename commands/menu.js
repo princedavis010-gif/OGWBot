@@ -51,6 +51,10 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .flirt
 │ ➜ .ship
 │ ➜ .insult
+│ ➜ .game list
+│ ➜ .game start mafia|number|trivia|word
+│ ➜ .game join / .game begin
+│ ➜ .game status / .game stop
 
 ┏━━━━━━━━━━━━━━━━━
 ┃ 📋 MENU & HELP

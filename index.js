@@ -33,6 +33,7 @@ const { isBlacklisted, checkAndIncrementUsage, blockUser, unblockUser, setUserLi
 const { enableAntiLink, disableAntiLink, isAntiLinkEnabled } = require('./utils/antiLinkControl');
 const { isGroupAllowed, canUseCommand, formatCooldownMessage } = require('./utils/antiSpam');
 const handleMenu = require('./commands/menu');
+const { handleGameMessage } = require('./commands/games');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
 let isPrivate = false;
@@ -1002,7 +1003,7 @@ async function connectToWhatsApp() {
                             return;
                         }
 
-                        const staysPublicInAdminMode = ['taker', 'sticker', 'toimg', 'tovid'].includes(commandName);
+                        const staysPublicInAdminMode = ['game', 'taker', 'sticker', 'toimg', 'tovid'].includes(commandName);
                         if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber) && !staysPublicInAdminMode) {
                             let senderIsAdmin = false;
                             try {
@@ -1040,6 +1041,11 @@ async function connectToWhatsApp() {
                         });
                         return;
                         
+                    }
+
+                    if (/^\.game(?:\s|$)/i.test(text.trim())) {
+                        await handleGameMessage({ sock, m, sender, text, senderNumber, senderJid, contextInfo });
+                        return;
                     }
 
                     // Print to terminal if logs are enabled
