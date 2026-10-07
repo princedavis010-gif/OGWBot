@@ -34,6 +34,7 @@ const { enableAntiLink, disableAntiLink, isAntiLinkEnabled } = require('./utils/
 const { isGroupAllowed, canUseCommand, formatCooldownMessage } = require('./utils/antiSpam');
 const handleMenu = require('./commands/menu');
 const { handleGameMessage } = require('./commands/games');
+const handleJambLesson = require('./commands/jamb');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
 let isPrivate = false;
@@ -1045,6 +1046,11 @@ async function connectToWhatsApp() {
 
                     if (/^\.game(?:\s|$)/i.test(text.trim())) {
                         await handleGameMessage({ sock, m, sender, text, senderNumber, senderJid, contextInfo });
+                        return;
+                    }
+
+                    if (/^\.jamb(?:\s|$)/i.test(text.trim())) {
+                        await handleJambLesson({ sock, m, sender, text, senderNumber, senderJid });
                         return;
                     }
 

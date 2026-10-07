@@ -3,7 +3,7 @@ const path = require('path');
 
 const commandNames = new Set([
     'add', 'admin', 'alive', 'antilink', 'antiviewonce', 'block', 'chat', 'death', 'delete', 'demote',
-    'dare', 'everyone', 'flirt', 'flirty', 'game', 'group', 'h', 'imagine', 'kick',
+    'dare', 'everyone', 'flirt', 'flirty', 'game', 'group', 'h', 'imagine', 'jamb', 'kick',
     'insult', 'life', 'limit', 'list', 'lock', 'lovetest', 'marriage', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
     'poll', 'promote', 'public', 'private', 'quote', 'rbg', 'removelimit',
     'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg', 'tovid',
