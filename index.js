@@ -255,11 +255,31 @@ function isOwnerOrBotNumber(candidate) {
     return Boolean(cleanCandidate) && protectedNumbers.has(cleanCandidate);
 }
 
-function isProtectedTargetJid(jid) {
-    return isOwnerOrBotNumber(getSenderNumber(jid));
+async function isProtectedTargetJid(sock, groupJid, jid) {
+    if (isOwnerOrBotNumber(getSenderNumber(jid))) return true;
+
+    if (jid?.endsWith('@lid') || jid?.endsWith('@hosted.lid')) {
+        try {
+            const phoneJid = await sock.signalRepository.lidMapping.getPNForLID(jid);
+            if (isOwnerOrBotNumber(getSenderNumber(phoneJid))) return true;
+        } catch {
+            // Try the group participant mapping if the local LID mapping is unavailable.
+        }
+
+        if (groupJid?.endsWith('@g.us')) {
+            try {
+                const phoneJid = await getGroupParticipantPhoneNumber(sock, groupJid, [jid]);
+                if (isOwnerOrBotNumber(getSenderNumber(phoneJid))) return true;
+            } catch {
+                // Keep the target unprotected only when no phone identity can be resolved.
+            }
+        }
+    }
+
+    return false;
 }
 
-function hasProtectedTarget({ contextInfo, text, fallbackJid }) {
+async function hasProtectedTarget({ sock, groupJid, contextInfo, text }) {
     const jids = [];
 
     if (Array.isArray(contextInfo?.mentionedJid)) {
@@ -267,9 +287,10 @@ function hasProtectedTarget({ contextInfo, text, fallbackJid }) {
     }
 
     if (contextInfo?.participant) jids.push(contextInfo.participant);
+    if (contextInfo?.participantAlt) jids.push(contextInfo.participantAlt);
 
-    for (const jid of jids) {
-        if (isProtectedTargetJid(jid)) return true;
+    for (const jid of new Set(jids)) {
+        if (await isProtectedTargetJid(sock, groupJid, jid)) return true;
     }
 
     const directNumberMatches = String(text || '').match(/@?(\d{7,15})/g) || [];
@@ -1070,7 +1091,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot kick the owner.' }, { quoted: m });
                             return;
                         }
@@ -1084,7 +1105,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: 'The owner? 😒 Really?.' }, { quoted: m });
                             return;
                         }
@@ -1098,7 +1119,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot demote the owner.' }, { quoted: m });
                             return;
                         }
@@ -1112,7 +1133,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
                             return;
                         }
@@ -1126,7 +1147,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot lock the owner.' }, { quoted: m });
                             return;
                         }
@@ -1158,7 +1179,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: "❌ You could'nt lock the owner in the first place." }, { quoted: m });
                             return;
                         }
@@ -1172,7 +1193,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot block the owner.' }, { quoted: m });
                             return;
                         }
@@ -1185,7 +1206,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot unblock the owner.' }, { quoted: m });
                             return;
                         }
@@ -1198,7 +1219,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .limit.' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
                             return;
                         }
@@ -1408,7 +1429,7 @@ async function connectToWhatsApp() {
                     if (text.toLowerCase() === '.life' || text.toLowerCase() === '.death') {
 
                         if (!isOwnerSenderNumber(senderNumber)) {
-                            await sock.sendMessage(sender, { text: `❌ Access Denied! You're not the owner.` });
+                            await sock.sendMessage(sender, { text: `❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳` });
                             return;
                         }
 
@@ -1483,7 +1504,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: 'The owner is in the chat already.' }, { quoted: m });
                             return;
                         }
@@ -1497,7 +1518,7 @@ async function connectToWhatsApp() {
                     }
 
                     if (/^\.insult(?:\s|$)/i.test(text.trim())) {
-                        if (hasProtectedTarget({ contextInfo, text })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot insult the owner 😝' }, { quoted: m });
                             return;
                         }
@@ -1521,7 +1542,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: '❌ You cannot mute the owner.' }, { quoted: m });
                             return;
                         }
@@ -1543,7 +1564,7 @@ async function connectToWhatsApp() {
                             await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝙶𝚁𝙾𝚄𝙿 𝙰𝙳𝙼𝙸𝙽𝚂 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳' }, { quoted: m });
                             return;
                         }
-                        if (hasProtectedTarget({ contextInfo, text, fallbackJid: m.key.participant || senderJid })) {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
                             await sock.sendMessage(sender, { text: "❌ You could'nt mute the owner in the first place." }, { quoted: m });
                             return;
                         }
