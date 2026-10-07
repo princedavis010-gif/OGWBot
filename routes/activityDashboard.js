@@ -203,38 +203,42 @@ function dashboardPage() {
     <style>
         :root {
             color-scheme: dark;
-            --bg-1: #08111f;
-            --bg-2: #101f3d;
-            --panel: rgba(15, 23, 42, 0.72);
-            --panel-strong: rgba(15, 23, 42, 0.9);
-            --line: rgba(148, 163, 184, 0.25);
-            --text: #ebf2ff;
-            --muted: #a7b6d2;
-            --green: #22c55e;
-            --green-soft: rgba(34, 197, 94, 0.16);
-            --teal: #2dd4bf;
+            --bg-deep: #0b1020;
+            --bg-mid: #151b3c;
+            --panel: rgba(15, 23, 42, 0.68);
+            --panel-strong: rgba(15, 23, 42, 0.86);
+            --line: rgba(148, 163, 184, 0.20);
+            --text: #e5eefb;
+            --muted: #9aa9c3;
+            --green: #34d399;
+            --green-soft: rgba(52, 211, 153, 0.14);
             --amber: #fbbf24;
-            --purple: #a78bfa;
+            --amber-soft: rgba(251, 191, 36, 0.12);
+            --cyan: #67e8f9;
+            --cyan-soft: rgba(103, 232, 249, 0.12);
+            --violet: #a78bfa;
             --pink: #f472b6;
-            --red: #f87171;
-            --shadow: 0 18px 50px rgba(15, 23, 42, 0.42);
+            --shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         html, body {
             margin: 0;
             min-height: 100%;
-            background:
-                radial-gradient(circle at top left, rgba(34,197,94,0.18), transparent 34%),
-                radial-gradient(circle at bottom right, rgba(167,139,250,0.22), transparent 28%),
-                linear-gradient(135deg, var(--bg-1), var(--bg-2));
-            color: var(--text);
-            font: 14px Arial, sans-serif;
         }
 
         body {
-            padding: 28px 18px 40px;
+            padding: 28px 20px 50px;
+            color: var(--text);
+            font: 14px Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(167, 139, 250, 0.18), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.14), transparent 22%),
+                linear-gradient(135deg, var(--bg-deep), var(--bg-mid));
+            letter-spacing: 0.01em;
         }
 
         main {
@@ -242,49 +246,67 @@ function dashboardPage() {
             margin: 0 auto;
         }
 
-        header {
+        .shell {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .topbar,
+        .panel,
+        .stat-card {
+            background: rgba(15, 23, 42, 0.56);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .topbar {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 14px;
-            padding: 14px 18px 18px;
-            margin-bottom: 18px;
-            border-bottom: 1px solid var(--line);
-            background: rgba(15, 23, 42, 0.26);
-            border-radius: 18px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
-            backdrop-filter: blur(10px);
+            gap: 16px;
+            padding: 22px 24px;
+            border-radius: 22px;
         }
 
         h1 {
             margin: 0;
             color: #ddbb0f;
-            font-size: clamp(26px, 3vw, 38px);
+            font-size: clamp(24px, 2vw, 35px);
+            line-height: 1.2;
             font-family: 'Kavoon', system-ui;
-            letter-spacing: 0.04em;
         }
 
-        .status {
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(52, 211, 153, 0.12);
+            border: 1px solid rgba(52, 211, 153, 0.25);
             color: var(--green);
             font-weight: 700;
         }
 
-        .status-dot {
-            display: inline-block;
+        .status-pill::before {
+            content: '';
             width: 9px;
             height: 9px;
             border-radius: 50%;
-            background: var(--green);
-            box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
-            margin-right: 8px;
-            vertical-align: middle;
-            animation: pulse 1.7s infinite ease-in-out;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.75; }
+            background: currentColor;
+            box-shadow: 0 0 14px currentColor;
         }
 
         .toolbar {
@@ -292,418 +314,540 @@ function dashboardPage() {
             flex-wrap: wrap;
             align-items: center;
             gap: 12px;
-            margin: 20px 0 16px;
+            margin-top: 2px;
         }
 
         input[type=search] {
-            flex: 1;
-            min-width: 240px;
+            flex: 1 1 240px;
+            min-width: 200px;
             padding: 12px 14px;
-            border: 1px solid rgba(148, 163, 184, 0.25);
+            border: 1px solid var(--line);
             border-radius: 12px;
-            background: rgba(15, 23, 42, 0.55);
+            background: rgba(15, 23, 42, 0.7);
             color: var(--text);
             outline: none;
-            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.35);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         input[type=search]:focus {
-            border-color: rgba(45, 212, 191, 0.8);
-            box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12);
-        }
-
-        .toolbar .meta {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-radius: 12px;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--line);
-            color: var(--muted);
+            border-color: rgba(103, 232, 249, 0.8);
+            box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.12);
         }
 
         button {
-            padding: 10px 14px;
+            padding: 11px 16px;
             border: 0;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--green), #22a65c);
-            color: white;
-            font-weight: bold;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--green), #48c7a0);
+            color: #08141f;
+            font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.2);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 16px 30px rgba(52, 211, 153, 0.25);
         }
 
         button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 10px 24px rgba(34, 197, 94, 0.24);
         }
 
-        .dashboard-grid {
+        .muted {
+            color: var(--muted);
+        }
+
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 16px;
-            margin-bottom: 20px;
         }
 
-        .metric-card,
-        .panel,
-        .user-card {
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.62));
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(12px);
-        }
-
-        .metric-card {
+        .stat-card {
             padding: 18px 18px 16px;
+            border-radius: 20px;
             position: relative;
             overflow: hidden;
         }
 
-        .metric-card::after {
+        .stat-card::before {
             content: '';
             position: absolute;
-            inset: auto -20px -26px auto;
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.04);
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cyan), var(--violet), var(--green));
         }
 
-        .metric-label {
-            font-size: 12px;
+        .kicker {
+            display: block;
             color: var(--muted);
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.12em;
         }
 
-        .metric-value {
-            margin-top: 12px;
-            font-size: clamp(28px, 4vw, 42px);
-            font-weight: 700;
-            color: var(--text);
+        .stat-value {
+            display: block;
+            margin-top: 10px;
+            font-size: clamp(24px, 2.2vw, 34px);
+            font-weight: 800;
+            line-height: 1.1;
         }
 
-        .metric-trend {
-            margin-top: 8px;
-            color: var(--teal);
+        .stat-sub {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
             font-size: 12px;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 18px;
         }
 
         .panel {
             padding: 18px;
+            border-radius: 24px;
+            min-height: 220px;
         }
 
-        .panel h3 {
-            margin: 0 0 12px;
-            font-size: 16px;
-            color: #d5e6ff;
-        }
-
-        .user-analytics {
-            display: grid;
-            gap: 14px;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            margin-bottom: 20px;
-        }
-
-        .user-card {
-            padding: 16px;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
-        .user-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(45, 212, 191, 0.4);
-        }
-
-        .user-head {
+        .panel-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
             margin-bottom: 12px;
         }
 
-        .user-name {
-            font-size: 15px;
-            font-weight: 700;
-            color: #fff;
-            word-break: break-word;
+        .panel-header h3 {
+            margin: 0;
+            color: var(--text);
+            font-size: 18px;
         }
 
-        .user-total {
-            font-size: 12px;
-            padding: 6px 8px;
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 10px;
             border-radius: 999px;
-            background: var(--green-soft);
-            color: var(--green);
-            border: 1px solid rgba(34,197,94,0.4);
+            background: rgba(103, 232, 249, 0.08);
+            border: 1px solid rgba(103, 232, 249, 0.18);
+            color: var(--cyan);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
-        .mini-bars {
-            display: flex;
-            align-items: end;
-            height: 72px;
-            gap: 6px;
-            margin: 12px 0 10px;
-            padding: 8px 2px 0;
-            border-radius: 10px;
-            background: linear-gradient(180deg, rgba(148,163,184,0.04), rgba(148,163,184,0.0));
+        .chart-wrap {
+            height: 220px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            overflow: hidden;
+            padding: 12px 12px 6px;
         }
 
-        .mini-bar {
-            flex: 1;
-            min-width: 8px;
-            border-radius: 8px 8px 0 0;
-            background: linear-gradient(180deg, var(--teal), var(--purple));
-            opacity: 0.9;
-            box-shadow: 0 6px 18px rgba(45, 212, 191, 0.15);
-            transition: height 0.25s ease;
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
-        .user-meta {
+        .chart-labels {
             display: flex;
             justify-content: space-between;
-            gap: 12px;
+            margin-top: 8px;
             color: var(--muted);
-            font-size: 12px;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .user-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.34);
+        }
+
+        .user-rank {
+            width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(167, 139, 250, 0.16);
+            color: var(--violet);
+            font-weight: 800;
+        }
+
+        .user-main {
+            min-width: 0;
+        }
+
+        .user-name {
+            display: block;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-action {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .user-count {
+            color: var(--green);
+            font-weight: 800;
+            font-size: 14px;
         }
 
         .table-wrap {
             overflow-x: auto;
             border-radius: 18px;
-            background: rgba(15, 23, 42, 0.48);
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            background: rgba(15, 23, 42, 0.32);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 700px;
             text-align: left;
         }
 
         th,
         td {
             padding: 12px 14px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-            white-space: nowrap;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            vertical-align: top;
         }
 
         th {
-            color: var(--teal);
-            font-weight: 600;
-            background: rgba(15, 23, 42, 0.45);
-        }
-
-        tbody tr {
-            transition: background 0.2s ease;
-        }
-
-        tbody tr:hover {
-            background: rgba(148, 163, 184, 0.04);
-        }
-
-        td.muted {
-            color: var(--muted);
-        }
-
-        .chip {
-            display: inline-block;
-            padding: 5px 7px;
-            border-radius: 999px;
+            color: var(--cyan);
             font-size: 11px;
-            border: 1px solid rgba(148,163,184,0.2);
-            background: rgba(148,163,184,0.08);
-            color: #d9e5ff;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: rgba(15, 23, 42, 0.42);
         }
 
-        @media (max-width: 600px) {
-            body { padding: 16px 12px 28px; }
-            header { padding: 12px 14px 14px; }
-            .toolbar { margin-top: 16px; }
-            th, td { padding: 10px 10px; }
+        td {
+            color: var(--text);
+        }
+
+        .action-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: rgba(52, 211, 153, 0.12);
+            border: 1px solid rgba(52, 211, 153, 0.18);
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            color: var(--muted);
+            text-align: center;
+            padding: 18px;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 560px) {
+            body {
+                padding: 18px 12px 36px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar,
+            .panel,
+            .stat-card {
+                border-radius: 18px;
+            }
+
+            .toolbar {
+                width: 100%;
+            }
         }
     </style>
 </head>
 
 <body>
-    <main>
-        <header>
-            <h1>OG CORE Activity Dashboard</h1>
+    <main class="shell">
+        <header class="topbar">
             <div>
-                <span id="connection" class="status"><span class="status-dot"></span>Loading status...</span>
-                <span id="uptime" class="muted"></span>
+                <h1>OG CORE Activity Dashboard</h1>
+                <div class="meta">
+                    <span id="connection" class="status-pill">Loading status...</span>
+                    <span id="uptime" class="muted"></span>
+                </div>
+            </div>
+            <div class="toolbar">
+                <input id="filter" type="search" placeholder="Filter by user, action, or group" aria-label="Filter activity">
+                <span id="updated" class="muted">Loading activity...</span>
+                <form action="/admin/login" method="POST"><button type="submit">Back</button></form>
             </div>
         </header>
 
-        <div class="toolbar">
-            <input id="filter" type="search" placeholder="Filter by user, action, or group" aria-label="Filter activity">
-            <div class="meta">
-                <span id="updated" class="muted">Loading activity...</span>
-            </div>
-            <form action="/admin/login" method="POST"><button type="submit">Back</button></form>
-        </div>
-
-        <section class="dashboard-grid" id="summaryCards"></section>
-
-        <section class="user-analytics panel" aria-label="User activity analytics">
-            <h3>Top user activity</h3>
-            <div id="userInsights"></div>
+        <section class="stats-grid">
+            <article class="stat-card">
+                <span class="kicker">Total events</span>
+                <span id="totalEvents" class="stat-value">0</span>
+                <span class="stat-sub">Recent command activity</span>
+            </article>
+            <article class="stat-card">
+                <span class="kicker">Unique users</span>
+                <span id="uniqueUsers" class="stat-value">0</span>
+                <span class="stat-sub">Distinct usernames tracked</span>
+            </article>
+            <article class="stat-card">
+                <span class="kicker">Groups</span>
+                <span id="groupCount" class="stat-value">0</span>
+                <span class="stat-sub">Chats with group activity</span>
+            </article>
+            <article class="stat-card">
+                <span class="kicker">Top action</span>
+                <span id="topAction" class="stat-value">-</span>
+                <span id="topActionMeta" class="stat-sub">No activity yet</span>
+            </article>
         </section>
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Chat</th>
-                        <th>Group</th>
-                    </tr>
-                </thead>
-                <tbody id="events">
-                    <tr>
-                        <td class="muted" colspan="5">Loading...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <section class="layout-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <h3>Usage graph</h3>
+                    <span class="pill">Last 12 hours</span>
+                </div>
+                <div class="chart-wrap">
+                    <svg id="usageChart" viewBox="0 0 560 200" preserveAspectRatio="none" aria-label="Usage graph"></svg>
+                </div>
+                <div id="chartLabels" class="chart-labels"></div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-header">
+                    <h3>Top usernames</h3>
+                    <span id="userCountBadge" class="pill">0</span>
+                </div>
+                <div id="userStats" class="user-list"></div>
+            </article>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h3>Recent activity feed</h3>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Chat type</th>
+                            <th>Chat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events">
+                        <tr>
+                            <td class="empty-state" colspan="5">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </main>
 
     <script>
         let activityEvents = [];
         const filterInput = document.getElementById('filter');
 
-        function formatNumber(value) {
-            return Number(value || 0).toLocaleString();
-        }
-
-        function getUserStats(events) {
-            const userMap = new Map();
-
+        function aggregateUserStats(events) {
+            const map = new Map();
             for (const event of events) {
-                const key = String(event.user || 'unknown');
-                const entry = userMap.get(key) || {
-                    user: key,
-                    total: 0,
-                    actions: Object.create(null),
-                    lastSeen: null,
-                    groups: new Set()
-                };
-
+                const user = String(event.user || 'unknown').trim() || 'unknown';
+                const entry = map.get(user) || { user, total: 0, actionMap: new Map() };
                 entry.total += 1;
-                entry.actions[event.action || 'unknown'] = (entry.actions[event.action || 'unknown'] || 0) + 1;
-                if (event.chatType === 'group' && event.chat) entry.groups.add(event.chat);
-                const ts = new Date(event.at || Date.now()).getTime();
-                if (!entry.lastSeen || ts > entry.lastSeen) entry.lastSeen = ts;
-                userMap.set(key, entry);
+                const action = String(event.action || 'unknown').trim() || 'unknown';
+                entry.actionMap.set(action, (entry.actionMap.get(action) || 0) + 1);
+                map.set(user, entry);
             }
 
-            return Array.from(userMap.values()).map((entry) => {
-                const labels = Object.entries(entry.actions).sort((a, b) => b[1] - a[1]);
-                const topAction = labels[0] ? labels[0][0] : 'unknown';
-                const topCount = labels[0] ? labels[0][1] : 0;
-                return {
+            return Array.from(map.values())
+                .map((entry) => ({
                     user: entry.user,
                     total: entry.total,
-                    topAction,
-                    topCount,
-                    lastSeen: entry.lastSeen,
-                    groups: entry.groups.size,
-                    actions: labels
-                };
-            }).sort((a, b) => b.total - a.total || a.user.localeCompare(b.user));
+                    topAction: Array.from(entry.actionMap.entries()).sort((a, b) => b[1] - a[1])[0] || ['unknown', 0]
+                }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 6);
         }
 
-        function renderMetrics(events) {
+        function renderSummary(events) {
             const total = events.length;
-            const uniques = new Set(events.map((event) => String(event.user || 'unknown'))).size;
-            const groups = new Set(events.filter((event) => event.chatType === 'group').map((event) => String(event.chat || 'unknown'))).size;
-            const actions = new Set(events.map((event) => String(event.action || 'unknown'))).size;
+            const uniqueUsers = new Set(events.map((event) => event.user || 'unknown')).size;
+            const groupCount = new Set(events.filter((event) => event.chatType === 'group').map((event) => event.chat || 'unknown')).size;
+            const actionMap = new Map();
+            for (const event of events) {
+                const action = String(event.action || 'unknown').trim() || 'unknown';
+                actionMap.set(action, (actionMap.get(action) || 0) + 1);
+            }
+            const topActionEntry = Array.from(actionMap.entries()).sort((a, b) => b[1] - a[1])[0];
 
-            const cards = [
-                { label: 'Total events', value: formatNumber(total), trend: 'Realtime feed' },
-                { label: 'Unique users', value: formatNumber(uniques), trend: 'Live audience' },
-                { label: 'Group chats', value: formatNumber(groups), trend: 'Bot traffic' },
-                { label: 'Actions tracked', value: formatNumber(actions), trend: 'Command coverage' }
-            ];
-
-            document.getElementById('summaryCards').innerHTML = cards.map(function (card) {
-                return '<div class="metric-card">' +
-                    '<div class="metric-label">' + card.label + '</div>' +
-                    '<div class="metric-value">' + card.value + '</div>' +
-                    '<div class="metric-trend">' + card.trend + '</div>' +
-                    '</div>';
-            }).join('');
+            document.getElementById('totalEvents').textContent = total;
+            document.getElementById('uniqueUsers').textContent = uniqueUsers;
+            document.getElementById('groupCount').textContent = groupCount;
+            document.getElementById('topAction').textContent = topActionEntry ? topActionEntry[0] : '-';
+            document.getElementById('topActionMeta').textContent = topActionEntry ? topActionEntry[1] + ' hits' : 'No activity yet';
         }
 
-        function renderUserInsights(events) {
-            const users = getUserStats(events).slice(0, 8);
-            const container = document.getElementById('userInsights');
+        function renderUsageChart(events) {
+            const svg = document.getElementById('usageChart');
+            const labelsBox = document.getElementById('chartLabels');
+            const limit = 12;
+            const now = Date.now();
+            const buckets = [];
+            for (let i = limit - 1; i >= 0; i -= 1) {
+                const pointTime = now - (i * 60 * 60 * 1000);
+                buckets.push({ time: pointTime, count: 0 });
+            }
 
-            if (!users.length) {
-                container.innerHTML = '<div class="muted">No user data yet.</div>';
+            for (const event of events) {
+                const eventTime = new Date(event.at).getTime();
+                if (Number.isNaN(eventTime)) continue;
+                const index = Math.max(0, Math.min(limit - 1, Math.floor((now - eventTime) / (60 * 60 * 1000))));
+                if (index >= 0 && index < limit) {
+                    buckets[limit - 1 - index].count += 1;
+                }
+            }
+
+            const width = 560;
+            const height = 200;
+            const chartPadding = 18;
+            const maxValue = Math.max(1, ...buckets.map((item) => item.count));
+            const step = (width - chartPadding * 2) / Math.max(1, buckets.length - 1);
+            const points = buckets.map((bucket, index) => {
+                const x = chartPadding + index * step;
+                const y = height - chartPadding - (bucket.count / maxValue) * (height - chartPadding * 2);
+                return { x, y, count: bucket.count };
+            });
+
+            const linePath = points.map((point, index) => (index === 0 ? 'M ' : 'L ') + point.x + ' ' + point.y).join(' ');
+            const areaPath = linePath + ' L ' + points[points.length - 1].x + ' ' + (height - chartPadding) + ' L ' + points[0].x + ' ' + (height - chartPadding) + ' Z';
+
+            svg.innerHTML = [
+                '<defs>',
+                '<linearGradient id="usageFill" x1="0" x2="0" y1="0" y2="1">',
+                '<stop offset="0%" stop-color="rgba(103,232,249,0.42)" />',
+                '<stop offset="100%" stop-color="rgba(103,232,249,0.02)" />',
+                '</linearGradient>',
+                '</defs>',
+                '<path d="' + areaPath + '" fill="url(#usageFill)" opacity="0.9"></path>',
+                '<path d="' + linePath + '" fill="none" stroke="#67e8f9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>',
+                points.map(function (point) {
+                    return '<circle cx="' + point.x + '" cy="' + point.y + '" r="' + (point.count > 0 ? 3 : 0) + '" fill="#34d399"></circle>';
+                }).join('')
+            ].join('');
+
+            const labels = buckets.map((bucket, index) => {
+                const date = new Date(bucket.time);
+                return index % 2 === 0 || index === buckets.length - 1 ? date.toLocaleString('en-US', { hour: 'numeric' }) : '';
+            });
+            labelsBox.innerHTML = labels.map((label) => '<span>' + label + '</span>').join('');
+        }
+
+        function renderUserStats(events) {
+            const container = document.getElementById('userStats');
+            const data = aggregateUserStats(events);
+            document.getElementById('userCountBadge').textContent = data.length;
+            if (!data.length) {
+                container.innerHTML = '<div class="empty-state">No user activity yet.</div>';
                 return;
             }
 
-            const maxTotal = Math.max(...users.map((user) => user.total), 1);
-
-            container.innerHTML = users.map(function (user) {
-                const bars = user.actions.slice(0, 6).map(function ([label, count]) {
-                    const percent = Math.max((count / Math.max(user.total, 1)) * 100, 8);
-                    return '<span class="mini-bar" title="' + label + ': ' + count + '" style="height:' + percent + '%"></span>';
-                }).join('');
-                const lastSeen = user.lastSeen ? new Date(user.lastSeen).toLocaleString() : 'No activity';
-                return '<div class="user-card">' +
-                    '<div class="user-head">' +
-                        '<div class="user-name">' + user.user + '</div>' +
-                        '<div class="user-total">' + user.total + ' events</div>' +
+            container.innerHTML = data.map((entry, index) => {
+                const actionName = entry.topAction[0] || 'unknown';
+                return '<div class="user-row">' +
+                    '<span class="user-rank">' + (index + 1) + '</span>' +
+                    '<div class="user-main">' +
+                        '<span class="user-name">' + (entry.user || 'unknown') + '</span>' +
+                        '<span class="user-action">Top action: ' + actionName + '</span>' +
                     '</div>' +
-                    '<div class="mini-bars">' + bars + '</div>' +
-                    '<div class="user-meta">' +
-                        '<span><strong>Top:</strong> <span class="chip">' + user.topAction + '</span></span>' +
-                        '<span>' + user.groups + ' groups</span>' +
-                    '</div>' +
-                    '<div class="user-meta" style="margin-top:8px;">' +
-                        '<span>Peak: ' + user.topCount + '</span>' +
-                        '<span>' + lastSeen + '</span>' +
-                    '</div>' +
-                    '</div>';
+                    '<span class="user-count">' + entry.total + '</span>' +
+                '</div>';
             }).join('');
         }
 
         function renderEvents() {
             const query = filterInput.value.trim().toLowerCase();
             const body = document.getElementById('events');
-            const visible = activityEvents.filter((event) =>
-                [event.user, event.action, event.chatType, event.chat].join(' ').toLowerCase().includes(query)
-            );
+            const visible = activityEvents.filter((event) => {
+                const text = [event.user, event.action, event.chatType, event.chat, event.at].join(' ').toLowerCase();
+                return text.includes(query);
+            });
+
             body.replaceChildren();
             if (visible.length === 0) {
                 const row = document.createElement('tr');
                 const cell = document.createElement('td');
                 cell.colSpan = 5;
-                cell.className = 'muted';
+                cell.className = 'empty-state';
                 cell.textContent = 'No matching activity.';
                 row.appendChild(cell);
                 body.appendChild(row);
                 return;
             }
+
             for (const event of visible) {
                 const row = document.createElement('tr');
-                const values = [new Date(event.at).toLocaleString(), event.user, event.action, event.chatType, event.chat || '-'];
-                for (const value of values) {
+                const values = [
+                    new Date(event.at).toLocaleString(),
+                    event.user || 'unknown',
+                    '<span class="action-badge">' + (event.action || 'unknown') + '</span>',
+                    event.chatType || 'private',
+                    event.chat || '-'
+                ];
+
+                values.forEach((value, index) => {
                     const cell = document.createElement('td');
-                    cell.textContent = value || '-';
+                    if (index === 2) {
+                        cell.innerHTML = value;
+                    } else {
+                        cell.textContent = value || '-';
+                    }
                     row.appendChild(cell);
-                }
+                });
+
                 body.appendChild(row);
             }
         }
@@ -711,15 +855,21 @@ function dashboardPage() {
         async function refreshActivity() {
             try {
                 const response = await fetch('/admin/activity/data', { cache: 'no-store' });
-                if (response.status === 401) { window.location.reload(); return; }
+                if (response.status === 401) {
+                    window.location.reload();
+                    return;
+                }
                 if (!response.ok) throw new Error('Unable to load activity');
+
                 const data = await response.json();
-                activityEvents = data.events;
-                document.getElementById('connection').innerHTML = '<span class="status-dot"></span>' + 'WhatsApp: ' + data.connection.status;
-                document.getElementById('uptime').textContent = 'Runtime: ' + Math.floor(data.uptimeSeconds / 60) + ' min';
+                activityEvents = Array.isArray(data.events) ? data.events : [];
+                document.getElementById('connection').textContent = 'WhatsApp: ' + (data.connection && data.connection.status ? data.connection.status : 'unknown');
+                document.getElementById('uptime').textContent = 'Runtime: ' + Math.floor((data.uptimeSeconds || 0) / 60) + ' min';
                 document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
-                renderMetrics(activityEvents);
-                renderUserInsights(activityEvents);
+
+                renderSummary(activityEvents);
+                renderUsageChart(activityEvents);
+                renderUserStats(activityEvents);
                 renderEvents();
             } catch (error) {
                 document.getElementById('updated').textContent = 'Activity feed unavailable.';
