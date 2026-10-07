@@ -191,6 +191,7 @@ function adminPage() {
 function dashboardPage() {
     return `<!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -202,21 +203,21 @@ function dashboardPage() {
     <style>
         :root {
             color-scheme: dark;
-            --bg-1: #070b1a;
-            --bg-2: #141933;
-            --panel: rgba(15, 23, 42, 0.62);
-            --panel-strong: rgba(17, 24, 39, 0.8);
-            --panel-soft: rgba(148, 163, 184, 0.08);
-            --line: rgba(255,255,255,0.12);
-            --emerald: #34d399;
-            --cyan: #67e8f9;
-            --gold: #fbbf24;
+            --bg-1: #08111f;
+            --bg-2: #101f3d;
+            --panel: rgba(15, 23, 42, 0.72);
+            --panel-strong: rgba(15, 23, 42, 0.9);
+            --line: rgba(148, 163, 184, 0.25);
+            --text: #ebf2ff;
+            --muted: #a7b6d2;
+            --green: #22c55e;
+            --green-soft: rgba(34, 197, 94, 0.16);
+            --teal: #2dd4bf;
+            --amber: #fbbf24;
+            --purple: #a78bfa;
             --pink: #f472b6;
-            --violet: #a78bfa;
-            --text: #e5eefb;
-            --muted: #9aa9c3;
-            --danger: #f87171;
-            --shadow: 0 22px 60px rgba(15, 23, 42, 0.45);
+            --red: #f87171;
+            --shadow: 0 18px 50px rgba(15, 23, 42, 0.42);
         }
 
         * { box-sizing: border-box; }
@@ -224,16 +225,16 @@ function dashboardPage() {
         html, body {
             margin: 0;
             min-height: 100%;
-            font-family: Arial, sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(103, 232, 249, 0.15), transparent 28%),
-                radial-gradient(circle at right center, rgba(167, 139, 250, 0.18), transparent 30%),
-                linear-gradient(145deg, var(--bg-1), var(--bg-2));
+                radial-gradient(circle at top left, rgba(34,197,94,0.18), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(167,139,250,0.22), transparent 28%),
+                linear-gradient(135deg, var(--bg-1), var(--bg-2));
             color: var(--text);
+            font: 14px Arial, sans-serif;
         }
 
         body {
-            padding: 28px 20px 48px;
+            padding: 28px 18px 40px;
         }
 
         main {
@@ -241,396 +242,322 @@ function dashboardPage() {
             margin: 0 auto;
         }
 
-        .glass {
-            background: rgba(15, 23, 42, 0.52);
-            border: 1px solid rgba(255,255,255,0.10);
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-        }
-
         header {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
-            padding: 20px 22px;
-            border-radius: 22px;
-            margin-bottom: 20px;
-        }
-
-        .branding {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            gap: 14px;
+            padding: 14px 18px 18px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(15, 23, 42, 0.26);
+            border-radius: 18px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+            backdrop-filter: blur(10px);
         }
 
         h1 {
             margin: 0;
-            font-size: clamp(1.7rem, 2.3vw, 2.6rem);
+            color: #ddbb0f;
+            font-size: clamp(26px, 3vw, 38px);
             font-family: 'Kavoon', system-ui;
-            color: #f0d466;
             letter-spacing: 0.04em;
         }
 
-        .subtitle {
-            color: var(--muted);
-            font-size: 0.86rem;
-        }
-
-        .header-meta {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
-
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(52, 211, 153, 0.28);
-            background: rgba(52, 211, 153, 0.08);
-            color: rgba(186, 255, 226, 0.96);
+        .status {
+            color: var(--green);
             font-weight: 700;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
+            margin-right: 8px;
+            vertical-align: middle;
+            animation: pulse 1.7s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.75; }
         }
 
         .toolbar {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            margin: 0 0 18px;
-            padding: 14px 16px;
-            border-radius: 18px;
-        }
-
-        .search-wrap {
-            position: relative;
-            flex: 1;
-            min-width: 220px;
-        }
-
-        .search-wrap::before {
-            content: "⌕";
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            opacity: 0.7;
-            color: var(--muted);
-            font-size: 1.1rem;
+            gap: 12px;
+            margin: 20px 0 16px;
         }
 
         input[type=search] {
-            width: 100%;
-            padding: 12px 14px 12px 38px;
+            flex: 1;
+            min-width: 240px;
+            padding: 12px 14px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
             border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.10);
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.55);
             color: var(--text);
             outline: none;
-            transition: border-color 0.2s ease, transform 0.2s ease;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.35);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         input[type=search]:focus {
-            border-color: rgba(103, 232, 249, 0.8);
-            transform: translateY(-1px);
+            border-color: rgba(45, 212, 191, 0.8);
+            box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12);
         }
 
-        .toolbar-actions {
+        .toolbar .meta {
             display: flex;
             align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 14px;
+            gap: 10px;
+            padding: 10px 12px;
             border-radius: 12px;
-            border: 1px solid transparent;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(52, 211, 153, 0.75));
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        button {
+            padding: 10px 14px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--green), #22a65c);
             color: white;
-            font-weight: 700;
+            font-weight: bold;
             cursor: pointer;
-            text-decoration: none;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .button:hover {
+        button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 14px 28px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 10px 24px rgba(34, 197, 94, 0.24);
         }
 
-        .stats-grid {
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
         }
 
-        .stat-card {
-            padding: 18px 18px 16px;
-            border-radius: 22px;
+        .metric-card,
+        .panel,
+        .user-card {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.62));
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
         }
 
-        .stat-card .label {
+        .metric-card {
+            padding: 18px 18px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            inset: auto -20px -26px auto;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.04);
+        }
+
+        .metric-label {
+            font-size: 12px;
             color: var(--muted);
-            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
 
-        .stat-card .value {
+        .metric-value {
             margin-top: 12px;
-            font-size: clamp(1.6rem, 2vw, 2.2rem);
+            font-size: clamp(28px, 4vw, 42px);
             font-weight: 700;
+            color: var(--text);
         }
 
-        .stat-card .trend {
+        .metric-trend {
             margin-top: 8px;
-            font-size: 0.76rem;
-            color: var(--muted);
-        }
-
-        .data-grid {
-            display: grid;
-            grid-template-columns: 1.5fr 0.9fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            color: var(--teal);
+            font-size: 12px;
         }
 
         .panel {
-            border-radius: 22px;
             padding: 18px;
-            overflow: hidden;
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 16px;
         }
 
         .panel h3 {
-            margin: 0;
-            font-size: 1rem;
-            letter-spacing: 0.04em;
-            color: #dbeafe;
-            text-transform: uppercase;
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #d5e6ff;
         }
 
-        .panel-tag {
-            color: var(--cyan);
-            font-size: 0.75rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+        .user-analytics {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            margin-bottom: 20px;
         }
 
-        .chart-wrap {
-            width: 100%;
-            border-radius: 16px;
+        .user-card {
             padding: 16px;
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.63), rgba(15, 23, 42, 0.9));
-            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
-        svg {
-            width: 100%;
-            height: 220px;
-            display: block;
+        .user-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(45, 212, 191, 0.4);
         }
 
-        .axis-labels {
+        .user-head {
             display: flex;
             justify-content: space-between;
-            font-size: 0.7rem;
-            color: var(--muted);
-            margin-top: 4px;
-            padding: 0 8px;
-        }
-
-        .user-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .user-row {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 10px;
             align-items: center;
-            padding: 12px 12px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
         .user-name {
-            color: var(--text);
-            font-weight: 600;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .user-count {
-            color: var(--gold);
+            font-size: 15px;
             font-weight: 700;
+            color: #fff;
+            word-break: break-word;
         }
 
-        .user-badge {
-            font-size: 0.72rem;
-            color: var(--cyan);
+        .user-total {
+            font-size: 12px;
+            padding: 6px 8px;
             border-radius: 999px;
-            background: rgba(103, 232, 249, 0.08);
-            border: 1px solid rgba(103, 232, 249, 0.14);
-            padding: 4px 8px;
+            background: var(--green-soft);
+            color: var(--green);
+            border: 1px solid rgba(34,197,94,0.4);
+        }
+
+        .mini-bars {
+            display: flex;
+            align-items: end;
+            height: 72px;
+            gap: 6px;
+            margin: 12px 0 10px;
+            padding: 8px 2px 0;
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(148,163,184,0.04), rgba(148,163,184,0.0));
+        }
+
+        .mini-bar {
+            flex: 1;
+            min-width: 8px;
+            border-radius: 8px 8px 0 0;
+            background: linear-gradient(180deg, var(--teal), var(--purple));
+            opacity: 0.9;
+            box-shadow: 0 6px 18px rgba(45, 212, 191, 0.15);
+            transition: height 0.25s ease;
+        }
+
+        .user-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 12px;
         }
 
         .table-wrap {
-            overflow: hidden;
-            border-radius: 22px;
+            overflow-x: auto;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.48);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 740px;
+            text-align: left;
         }
 
-        th, td {
+        th,
+        td {
             padding: 12px 14px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
             white-space: nowrap;
         }
 
         th {
-            color: var(--cyan);
-            font-size: 0.72rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            background: rgba(15, 23, 42, 0.72);
+            color: var(--teal);
+            font-weight: 600;
+            background: rgba(15, 23, 42, 0.45);
         }
 
-        td {
-            color: var(--text);
+        tbody tr {
+            transition: background 0.2s ease;
         }
 
         tbody tr:hover {
             background: rgba(148, 163, 184, 0.04);
         }
 
-        .muted {
+        td.muted {
             color: var(--muted);
         }
 
-        .status-dot {
+        .chip {
             display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--emerald);
-            box-shadow: 0 0 18px rgba(52, 211, 153, 0.8);
-            margin-right: 8px;
-        }
-
-        @media (max-width: 980px) {
-            .stats-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
-            .data-grid { grid-template-columns: 1fr; }
+            padding: 5px 7px;
+            border-radius: 999px;
+            font-size: 11px;
+            border: 1px solid rgba(148,163,184,0.2);
+            background: rgba(148,163,184,0.08);
+            color: #d9e5ff;
         }
 
         @media (max-width: 600px) {
-            body { padding: 16px 12px 32px; }
-            .stats-grid { grid-template-columns: 1fr; }
-            header, .toolbar { padding-left: 14px; padding-right: 14px; }
-            .toolbar { align-items: stretch; }
-            .toolbar-actions { width: 100%; justify-content: space-between; }
-            .button { flex: 1; }
+            body { padding: 16px 12px 28px; }
+            header { padding: 12px 14px 14px; }
+            .toolbar { margin-top: 16px; }
+            th, td { padding: 10px 10px; }
         }
     </style>
 </head>
+
 <body>
     <main>
-        <header class="glass">
-            <div class="branding">
-                <h1>OG CORE</h1>
-                <div class="subtitle">Activity Dashboard</div>
-            </div>
-            <div class="header-meta">
-                <span class="pill"><span class="status-dot"></span><span id="connection">Loading status...</span></span>
-                <span id="uptime" class="muted">Runtime: --</span>
+        <header>
+            <h1>OG CORE Activity Dashboard</h1>
+            <div>
+                <span id="connection" class="status"><span class="status-dot"></span>Loading status...</span>
+                <span id="uptime" class="muted"></span>
             </div>
         </header>
 
-        <div class="toolbar glass">
-            <div class="search-wrap">
-                <input id="filter" type="search" placeholder="Filter by user, action, or group" aria-label="Filter activity">
-            </div>
-            <div class="toolbar-actions">
+        <div class="toolbar">
+            <input id="filter" type="search" placeholder="Filter by user, action, or group" aria-label="Filter activity">
+            <div class="meta">
                 <span id="updated" class="muted">Loading activity...</span>
-                <form action="/admin/login" method="POST"><button class="button" type="submit">Back</button></form>
             </div>
+            <form action="/admin/login" method="POST"><button type="submit">Back</button></form>
         </div>
 
-        <section class="stats-grid">
-            <div class="stat-card glass">
-                <div class="label">Total events</div>
-                <div id="totalEvents" class="value">0</div>
-                <div class="trend">Recent bot activity</div>
-            </div>
-            <div class="stat-card glass">
-                <div class="label">Unique users</div>
-                <div id="uniqueUsers" class="value">0</div>
-                <div class="trend">Tracked identities</div>
-            </div>
-            <div class="stat-card glass">
-                <div class="label">Top action</div>
-                <div id="topAction" class="value">-</div>
-                <div class="trend">Most common trigger</div>
-            </div>
-            <div class="stat-card glass">
-                <div class="label">Top user</div>
-                <div id="topUser" class="value">-</div>
-                <div class="trend">Highest engagement</div>
-            </div>
+        <section class="dashboard-grid" id="summaryCards"></section>
+
+        <section class="user-analytics panel" aria-label="User activity analytics">
+            <h3>Top user activity</h3>
+            <div id="userInsights"></div>
         </section>
 
-        <section class="data-grid">
-            <div class="panel glass">
-                <div class="panel-header">
-                    <h3>Usage graph</h3>
-                    <span class="panel-tag">Last 24h</span>
-                </div>
-                <div class="chart-wrap">
-                    <svg id="usageGraph" viewBox="0 0 700 220" preserveAspectRatio="none" aria-label="Activity usage graph"></svg>
-                    <div class="axis-labels" id="axisLabels"></div>
-                </div>
-            </div>
-
-            <div class="panel glass">
-                <div class="panel-header">
-                    <h3>Username split</h3>
-                    <span class="panel-tag">Leaders</span>
-                </div>
-                <div id="userList" class="user-list"></div>
-            </div>
-        </section>
-
-        <div class="table-wrap glass">
+        <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
@@ -654,107 +581,102 @@ function dashboardPage() {
         let activityEvents = [];
         const filterInput = document.getElementById('filter');
 
-        function safeText(value) {
-            return String(value ?? '-').trim() || '-';
+        function formatNumber(value) {
+            return Number(value || 0).toLocaleString();
         }
 
-        function getActionCounts(events) {
-            const counts = new Map();
+        function getUserStats(events) {
+            const userMap = new Map();
+
             for (const event of events) {
-                const key = safeText(event.action);
-                counts.set(key, (counts.get(key) || 0) + 1);
+                const key = String(event.user || 'unknown');
+                const entry = userMap.get(key) || {
+                    user: key,
+                    total: 0,
+                    actions: Object.create(null),
+                    lastSeen: null,
+                    groups: new Set()
+                };
+
+                entry.total += 1;
+                entry.actions[event.action || 'unknown'] = (entry.actions[event.action || 'unknown'] || 0) + 1;
+                if (event.chatType === 'group' && event.chat) entry.groups.add(event.chat);
+                const ts = new Date(event.at || Date.now()).getTime();
+                if (!entry.lastSeen || ts > entry.lastSeen) entry.lastSeen = ts;
+                userMap.set(key, entry);
             }
-            return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+
+            return Array.from(userMap.values()).map((entry) => {
+                const labels = Object.entries(entry.actions).sort((a, b) => b[1] - a[1]);
+                const topAction = labels[0] ? labels[0][0] : 'unknown';
+                const topCount = labels[0] ? labels[0][1] : 0;
+                return {
+                    user: entry.user,
+                    total: entry.total,
+                    topAction,
+                    topCount,
+                    lastSeen: entry.lastSeen,
+                    groups: entry.groups.size,
+                    actions: labels
+                };
+            }).sort((a, b) => b.total - a.total || a.user.localeCompare(b.user));
         }
 
-        function getUserCounts(events) {
-            const counts = new Map();
-            for (const event of events) {
-                const key = safeText(event.user);
-                counts.set(key, (counts.get(key) || 0) + 1);
-            }
-            return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+        function renderMetrics(events) {
+            const total = events.length;
+            const uniques = new Set(events.map((event) => String(event.user || 'unknown'))).size;
+            const groups = new Set(events.filter((event) => event.chatType === 'group').map((event) => String(event.chat || 'unknown'))).size;
+            const actions = new Set(events.map((event) => String(event.action || 'unknown'))).size;
+
+            const cards = [
+                { label: 'Total events', value: formatNumber(total), trend: 'Realtime feed' },
+                { label: 'Unique users', value: formatNumber(uniques), trend: 'Live audience' },
+                { label: 'Group chats', value: formatNumber(groups), trend: 'Bot traffic' },
+                { label: 'Actions tracked', value: formatNumber(actions), trend: 'Command coverage' }
+            ];
+
+            document.getElementById('summaryCards').innerHTML = cards.map(function (card) {
+                return '<div class="metric-card">' +
+                    '<div class="metric-label">' + card.label + '</div>' +
+                    '<div class="metric-value">' + card.value + '</div>' +
+                    '<div class="metric-trend">' + card.trend + '</div>' +
+                    '</div>';
+            }).join('');
         }
 
-        function renderSummary() {
-            const total = activityEvents.length;
-            const userCounts = getUserCounts(activityEvents);
-            const actionCounts = getActionCounts(activityEvents);
-            document.getElementById('totalEvents').textContent = total;
-            document.getElementById('uniqueUsers').textContent = userCounts.length;
-            document.getElementById('topAction').textContent = actionCounts[0]?.[0] || '-';
-            document.getElementById('topUser').textContent = userCounts[0]?.[0] || '-';
+        function renderUserInsights(events) {
+            const users = getUserStats(events).slice(0, 8);
+            const container = document.getElementById('userInsights');
 
-            const topUsers = userCounts.slice(0, 5);
-            const userList = document.getElementById('userList');
-            userList.innerHTML = '';
-            if (!topUsers.length) {
-                userList.innerHTML = '<div class="muted">No user data available yet.</div>';
+            if (!users.length) {
+                container.innerHTML = '<div class="muted">No user data yet.</div>';
                 return;
             }
 
-            topUsers.forEach(([user, count], index) => {
-                const row = document.createElement('div');
-                row.className = 'user-row';
-                row.innerHTML = [
-                    '<div class="user-name">' + (index + 1) + '. ' + safeText(user) + '</div>',
-                    '<div class="user-count">' + count + '</div>',
-                    '<div class="user-badge">' + (index === 0 ? 'Leader' : 'Active') + '</div>'
-                ].join('');
-                userList.appendChild(row);
-            });
-        }
+            const maxTotal = Math.max(...users.map((user) => user.total), 1);
 
-        function renderUsageGraph() {
-            const svg = document.getElementById('usageGraph');
-            const labels = document.getElementById('axisLabels');
-            const now = Date.now();
-            const buckets = Array.from({ length: 12 }, (_, bucketIndex) => {
-                const time = new Date(now - (11 - bucketIndex) * 2 * 60 * 60 * 1000);
-                return {
-                    key: time.toISOString().slice(0, 13) + ':00:00.000Z',
-                    label: time.toLocaleTimeString([], { hour: 'numeric' }),
-                    count: 0
-                };
-            });
-
-            for (const event of activityEvents) {
-                const eventTime = new Date(event.at);
-                if (Number.isNaN(eventTime.getTime())) continue;
-                const bucket = buckets.find((item) => {
-                    const itemTime = new Date(item.key);
-                    return Math.abs(itemTime.getTime() - eventTime.getTime()) <= 60 * 60 * 1000;
-                });
-                if (bucket) bucket.count += 1;
-            }
-
-            const maxCount = Math.max(1, ...buckets.map((bucket) => bucket.count));
-            const points = buckets.map((bucket, index) => {
-                const x = (index / (buckets.length - 1)) * 100;
-                const y = 200 - (bucket.count / maxCount) * 150;
-                return x + ',' + y;
-            }).join(' ');
-
-            const areaPoints = points + ' 100,200 0,200';
-            const circleMarkup = buckets.map((bucket, index) => {
-                const x = (index / (buckets.length - 1)) * 100;
-                const y = 200 - (bucket.count / maxCount) * 150;
-                return '<circle cx="' + x + '" cy="' + y + '" r="' + (bucket.count ? 3.5 : 0) + '" fill="rgba(251,191,36,0.95)"></circle>';
+            container.innerHTML = users.map(function (user) {
+                const bars = user.actions.slice(0, 6).map(function ([label, count]) {
+                    const percent = Math.max((count / Math.max(user.total, 1)) * 100, 8);
+                    return '<span class="mini-bar" title="' + label + ': ' + count + '" style="height:' + percent + '%"></span>';
+                }).join('');
+                const lastSeen = user.lastSeen ? new Date(user.lastSeen).toLocaleString() : 'No activity';
+                return '<div class="user-card">' +
+                    '<div class="user-head">' +
+                        '<div class="user-name">' + user.user + '</div>' +
+                        '<div class="user-total">' + user.total + ' events</div>' +
+                    '</div>' +
+                    '<div class="mini-bars">' + bars + '</div>' +
+                    '<div class="user-meta">' +
+                        '<span><strong>Top:</strong> <span class="chip">' + user.topAction + '</span></span>' +
+                        '<span>' + user.groups + ' groups</span>' +
+                    '</div>' +
+                    '<div class="user-meta" style="margin-top:8px;">' +
+                        '<span>Peak: ' + user.topCount + '</span>' +
+                        '<span>' + lastSeen + '</span>' +
+                    '</div>' +
+                    '</div>';
             }).join('');
-
-            svg.innerHTML = [
-                '<defs>',
-                '<linearGradient id="graphFill" x1="0" y1="0" x2="0" y2="1">',
-                '<stop offset="0%" stop-color="rgba(103,232,249,0.55)" />',
-                '<stop offset="100%" stop-color="rgba(103,232,249,0.02)" />',
-                '</linearGradient>',
-                '</defs>',
-                '<polyline fill="none" stroke="rgba(103,232,249,0.95)" stroke-width="3" points="' + points + '" stroke-linecap="round" stroke-linejoin="round"></polyline>',
-                '<polygon points="' + areaPoints + '" fill="url(#graphFill)"></polygon>',
-                circleMarkup
-            ].join('');
-
-            labels.innerHTML = buckets.map((bucket) => '<span>' + bucket.label + '</span>').join('');
         }
 
         function renderEvents() {
@@ -763,7 +685,6 @@ function dashboardPage() {
             const visible = activityEvents.filter((event) =>
                 [event.user, event.action, event.chatType, event.chat].join(' ').toLowerCase().includes(query)
             );
-
             body.replaceChildren();
             if (visible.length === 0) {
                 const row = document.createElement('tr');
@@ -775,16 +696,9 @@ function dashboardPage() {
                 body.appendChild(row);
                 return;
             }
-
             for (const event of visible) {
                 const row = document.createElement('tr');
-                const values = [
-                    new Date(event.at).toLocaleString(),
-                    safeText(event.user),
-                    safeText(event.action),
-                    safeText(event.chatType),
-                    safeText(event.chat || '-')
-                ];
+                const values = [new Date(event.at).toLocaleString(), event.user, event.action, event.chatType, event.chat || '-'];
                 for (const value of values) {
                     const cell = document.createElement('td');
                     cell.textContent = value || '-';
@@ -800,12 +714,12 @@ function dashboardPage() {
                 if (response.status === 401) { window.location.reload(); return; }
                 if (!response.ok) throw new Error('Unable to load activity');
                 const data = await response.json();
-                activityEvents = Array.isArray(data.events) ? data.events : [];
-                document.getElementById('connection').textContent = 'WhatsApp: ' + (data.connection?.status || 'offline');
-                document.getElementById('uptime').textContent = 'Runtime: ' + Math.floor((data.uptimeSeconds || 0) / 60) + ' min';
+                activityEvents = data.events;
+                document.getElementById('connection').innerHTML = '<span class="status-dot"></span>' + 'WhatsApp: ' + data.connection.status;
+                document.getElementById('uptime').textContent = 'Runtime: ' + Math.floor(data.uptimeSeconds / 60) + ' min';
                 document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
-                renderSummary();
-                renderUsageGraph();
+                renderMetrics(activityEvents);
+                renderUserInsights(activityEvents);
                 renderEvents();
             } catch (error) {
                 document.getElementById('updated').textContent = 'Activity feed unavailable.';
@@ -817,6 +731,7 @@ function dashboardPage() {
         setInterval(refreshActivity, 5000);
     </script>
 </body>
+
 </html>`;
 }
 
