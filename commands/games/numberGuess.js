@@ -3,7 +3,7 @@ module.exports = {
     title: 'Number Guess',
     description: 'Race to guess a secret number from 1 to 100.',
     minPlayers: 2,
-    help: 'Guess a whole number from 1 to 100 with .game guess NUMBER.',
+    help: 'Players: at least 2. Start with .game start number, let everyone join, then the host uses .game begin. The bot secretly picks a whole number from 1 to 100. Everyone who joined can guess with .game guess NUMBER. The bot says whether each guess is too high or low. The first correct guess wins and ends the game.',
     createState() {
         return { phase: 'lobby', secret: null, guesses: 0 };
     },

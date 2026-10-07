@@ -28,7 +28,7 @@ module.exports = {
     title: 'Trivia',
     description: 'Answer multiple-choice questions; scores are tracked for joined players.',
     minPlayers: 1,
-    help: 'Answer the current question with .game answer A, .game answer B, .game answer C, or .game answer D.',
+    help: 'Players: at least 1. Start with .game start trivia, let players join with .game join, then the host uses .game begin. The bot asks five multiple-choice questions. Each joined player answers once per round with .game answer A, .game answer B, .game answer C, or .game answer D. Correct answers earn one point. The next question appears after every player has answered; highest score wins.',
     createState() {
         return { phase: 'lobby', round: 0, roundLimit: 5, current: null, used: [], scores: {}, answered: {} };
     },

@@ -37,6 +37,7 @@ function usageText() {
     return [
         '🎮 GROUP GAMES',
         '.game list',
+        '.game help [name]',
         '.game start mafia|number|trivia|word',
         '.game join',
         '.game begin',
@@ -90,17 +91,27 @@ async function handleGameMessage({ sock, m, sender, text, senderNumber, senderJi
     const actorId = playerId(senderNumber, senderJid);
     const isGroup = sender.endsWith('@g.us');
 
+    if (subcommand === 'help') {
+        const gameName = (parts[2] || '').toLowerCase();
+        const game = games[gameName];
+        const help = game
+            ? `${game.title}\n${game.help}`
+            : `${usageText()}\n\nFor game rules, use .game help mafia, .game help number, .game help trivia, or .game help word.`;
+        await sock.sendMessage(sender, { text: help }, { quoted: m });
+        return;
+    }
+
+    if (subcommand === 'list') {
+        const lines = Object.values(games).map((game) => `${game.name} (${game.minPlayers}+ players): ${game.description}`);
+        await sock.sendMessage(sender, { text: `Available games:\n${lines.join('\n')}\n\nStart one with .game start <name>. Read rules with .game help <name>.` }, { quoted: m });
+        return;
+    }
+
     if (!isGroup) {
         const handled = await handlePrivateGameMessage({ sock, text, senderNumber, senderJid });
         if (!handled) {
             await sock.sendMessage(sender, { text: 'Game setup uses a group chat. Mafia players send `.game kill NUMBER` here in private.' }, { quoted: m });
         }
-        return;
-    }
-
-    if (subcommand === 'list') {
-        const lines = Object.values(games).map((game) => `${game.name}: ${game.description}`);
-        await sock.sendMessage(sender, { text: `Available games:\n${lines.join('\n')}\n\nStart one with .game start <name>.` }, { quoted: m });
         return;
     }
 

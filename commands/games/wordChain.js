@@ -3,7 +3,7 @@ module.exports = {
     title: 'Word Chain',
     description: 'Take turns naming unused words that start with the previous word’s last letter.',
     minPlayers: 2,
-    help: 'Play with .game word WORD. Take turns; each word must start with the previous word’s final letter.',
+    help: 'Players: at least 2. Start with .game start word, let players join with .game join, then the host uses .game begin. Players take turns in join order. The first word can be any 2-24 letter A-Z word. Every next word must start with the previous word’s last letter. Repeated or invalid words do not use up the turn. Each valid word earns one point. The game ends after 20 valid words; highest score wins.',
     createState() {
         return { phase: 'lobby', turnIndex: 0, words: [], used: [], scores: {}, turns: 0, turnLimit: 20 };
     },
