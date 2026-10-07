@@ -1021,6 +1021,11 @@ async function connectToWhatsApp() {
                     }
 
                     if (commandName === 'delete') {
+                        if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
+                            await sock.sendMessage(sender, { text: '❌ You cannot delete the owner\'s message.' }, { quoted: m });
+                            return;
+                        }
+                        
                         await handleDelete({
                             sock,
                             m,
@@ -1034,6 +1039,7 @@ async function connectToWhatsApp() {
                             isGroupAdmin
                         });
                         return;
+                        
                     }
 
                     // Print to terminal if logs are enabled
