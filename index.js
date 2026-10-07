@@ -1743,6 +1743,10 @@ async function connectToWhatsApp() {
                                 ? `${sender}:${aiConversationIdentity}`
                                 : aiConversationIdentity;
                             const aiResult = await withAiTyping(sock, sender, () => getAiResponse(prompt, attachmentParts, async (requestedCommand) => {
+                                if (/\?\s*$/.test(userPrompt.trim())) {
+                                    return { executed: false, reason: 'The user asked a question; answer it without running a command.' };
+                                }
+
                                 const commandText = String(requestedCommand || '').trim();
                                 const commandLines = commandText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
                                 const isPollBatch = commandLines.length > 1 && commandLines.every((line) => /^\.poll(?:\s|$)/i.test(line));
