@@ -1,7 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
+let pdfParse = null;
+try {
+    pdfParse = require('pdf-parse');
+} catch (error) {
+    pdfParse = null;
+}
+
 const lessonsFile = path.join(__dirname, '../data/jambLessons.json');
+const dataFolder = path.join(__dirname, '../data');
 const fallbackLessons = {
     general: {
         title: 'JAMB General Practice',
@@ -25,7 +33,131 @@ function ensureLessonFile() {
     }
 }
 
-function loadLessons() {
+function normalizeLessonKey(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'general';
+}
+
+function inferLessonTitle(fileName) {
+    const clean = path.basename(fileName, path.extname(fileName)).replace(/[-_]+/g, ' ');
+    return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function extractOptions(blockText) {
+    const matches = [...blockText.matchAll(/(?:^|\s)(?:[A-D]|[1-4])[\).\-:]\s*([^\n]+(?:\n(?!\s*(?:[A-D]|[1-4])[\).\-:]).+)*)/gi)];
+    if (!matches.length) return [];
+
+    const options = [];
+    for (const match of matches) {
+        const text = match[1].replace(/\s+/g, ' ').trim();
+        if (text && !options.includes(text)) {
+            options.push(text);
+        }
+        if (options.length >= 4) break;
+    }
+    return options;
+}
+
+function parseQuestionsFromText(fileName, text) {
+    const cleaned = String(text || '')
+        .replace(/\r/g, '\n')
+        .replace(/\t/g, ' ')
+        .replace(/\s*\n\s*\n\s*/g, '\n\n')
+        .trim();
+
+    const blocks = cleaned.split(/\n\s*\n+/).map((block) => block.trim()).filter(Boolean);
+    const questions = [];
+
+    for (const block of blocks) {
+        const normalized = block.replace(/\s+/g, ' ');
+        if (!/[A-D][\).\-:]\s*/i.test(block)) continue;
+
+        const questionMatch = normalized.match(/(.+?)(?=\s(?:[A-D][\).\-:]|[1-4][\).\-:]))/i);
+        if (!questionMatch) continue;
+
+        const questionText = questionMatch[1].replace(/^(?:QUESTION|Q)\s*\d*[:.-]?\s*/i, '').trim();
+        if (!questionText || questionText.length < 8) continue;
+
+        const options = extractOptions(block);
+        if (options.length < 2) continue;
+
+        const answerMatch = block.match(/(?:answer|ans)\s*[:.-]?\s*([A-D])/i);
+        const answerIndex = answerMatch ? answerMatch[1].toUpperCase().charCodeAt(0) - 65 : null;
+
+        questions.push({
+            question: questionText,
+            options: options.slice(0, 4),
+            answer: Number.isInteger(answerIndex) && answerIndex >= 0 && answerIndex < options.length ? answerIndex : 0
+        });
+    }
+
+    if (questions.length === 0 && /\b[A-D][\).\-:]\s*[/i.test(cleaned)) {
+        const lines = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+        let currentQuestion = null;
+        let currentOptions = [];
+        for (const line of lines) {
+            if (!/[A-D][\).\-:]\s*/i.test(line)) {
+                if (currentQuestion && currentOptions.length) {
+                    questions.push({ question: currentQuestion, options: currentOptions.slice(0, 4), answer: 0 });
+                    currentQuestion = null;
+                    currentOptions = [];
+                }
+                if (!currentQuestion) currentQuestion = line;
+                continue;
+            }
+            const optionMatch = line.match(/([A-D])[\).\-:]\s*(.+)/i);
+            if (optionMatch) {
+                currentOptions.push(optionMatch[2].trim());
+            }
+        }
+        if (currentQuestion && currentOptions.length) {
+            questions.push({ question: currentQuestion, options: currentOptions.slice(0, 4), answer: 0 });
+        }
+    }
+
+    return questions.slice(0, 40);
+}
+
+async function buildLessonsFromPdfs() {
+    if (!pdfParse) {
+        return fallbackLessons;
+    }
+
+    const pdfFiles = fs.existsSync(dataFolder)
+        ? fs.readdirSync(dataFolder).filter((file) => file.toLowerCase().endsWith('.pdf')).sort()
+        : [];
+
+    if (!pdfFiles.length) {
+        return fallbackLessons;
+    }
+
+    const lessons = {};
+    for (const pdfFile of pdfFiles) {
+        const filePath = path.join(dataFolder, pdfFile);
+        try {
+            const fileBuffer = fs.readFileSync(filePath);
+            const data = await pdfParse(fileBuffer);
+            const questions = parseQuestionsFromText(pdfFile, data.text || '');
+            if (!questions.length) continue;
+
+            const lessonKey = normalizeLessonKey(pdfFile.replace(/\.pdf$/i, ''));
+            lessons[lessonKey] = {
+                title: inferLessonTitle(pdfFile),
+                questions
+            };
+        } catch (error) {
+            console.error(`Unable to parse ${pdfFile}:`, error.message);
+        }
+    }
+
+    if (!Object.keys(lessons).length) {
+        return fallbackLessons;
+    }
+
+    fs.writeFileSync(lessonsFile, JSON.stringify(lessons, null, 2));
+    return lessons;
+}
+
+async function loadLessons() {
     ensureLessonFile();
     try {
         const raw = fs.readFileSync(lessonsFile, 'utf8');
@@ -36,7 +168,8 @@ function loadLessons() {
     } catch (error) {
         console.error('Could not read JAMB lessons file:', error.message);
     }
-    return fallbackLessons;
+
+    return buildLessonsFromPdfs();
 }
 
 function getLessonByName(name, lessons) {
@@ -122,6 +255,7 @@ async function handleJambLesson({ sock, m, sender, text }) {
                 '',
                 'Commands:',
                 '.jamb list',
+                '.jamb refresh',
                 '.jamb start [lessonName]',
                 '.jamb answer A',
                 '.jamb status',
@@ -132,6 +266,13 @@ async function handleJambLesson({ sock, m, sender, text }) {
                 'Example: .jamb start general'
             ].join('\n')
         }, { quoted: m });
+        return true;
+    }
+
+    if (action === 'refresh') {
+        const rebuilt = await buildLessonsFromPdfs();
+        const lessonList = buildLessonList(rebuilt);
+        await sock.sendMessage(sender, { text: `📚 JAMB lessons refreshed from the PDF files in the data folder.\n\n${lessonList}` }, { quoted: m });
         return true;
     }
 
