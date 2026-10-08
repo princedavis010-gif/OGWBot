@@ -58,16 +58,7 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .game status / .game stop
 
 ┏━━━━━━━━━━━━━━━━━
-┃ � JAMB LESSONS
-┗━━━━━━━━━━━━━━━━━
-│ ➜ .jamb list
-│ ➜ .jamb start general
-│ ➜ .jamb answer A
-│ ➜ .jamb status
-│ ➜ .jamb stop
-
-┏━━━━━━━━━━━━━━━━━
-┃ �📋 MENU & HELP
+┃ 📋 MENU & HELP
 ┗━━━━━━━━━━━━━━━━━
 │ ➜ .list / .help / .h / .chat
 
