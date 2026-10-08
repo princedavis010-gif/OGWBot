@@ -36,15 +36,22 @@ function getPlayer(session, id) {
 function usageText() {
     return [
         '🎮 GROUP GAMES',
-        '.game list',
-        '.game help [name]',
-        '.game start mafia|number|trivia|word',
-        '.game join',
-        '.game begin',
-        '.game status',
-        '.game leave',
-        '.game stop',
-        'Game actions: .game vote @player, .game kill NUMBER (private), .game guess NUMBER, .game answer A-D, .game word WORD'
+        '.game', 
+        '> list',
+        '> help [name]',
+        '> start mafia|number|trivia|word',
+        '> join',
+        '> begin',
+        '> status',
+        '> leave',
+        '> stop',
+        ' ',
+        'Game actions:',
+        '> .game vote @player',
+        '> .game kill NUMBER (private)',
+        '> .game guess NUMBER',
+        '> .game answer A-D',
+        '> .game word WORD'
     ].join('\n');
 }
 

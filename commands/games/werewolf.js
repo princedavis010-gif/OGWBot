@@ -26,7 +26,11 @@ module.exports = {
     title: 'Mafia / Werewolf',
     description: 'Secret mafia role, private night elimination, group daytime vote. Roles are sent privately.',
     minPlayers: 4,
-    help: 'Players: at least 4. Start with .game start mafia, let everyone join with .game join, then the host uses .game begin. The bot privately assigns one Mafia and Town roles to the others. At night, Mafia privately messages the bot .game kill NUMBER using a living player’s full phone number. In the day, every living player can vote once with .game vote @player. The vote resolves after all living players vote; a tie eliminates nobody. Roles are revealed when a player is eliminated. Town wins by eliminating Mafia; Mafia wins when Mafia equals or outnumbers Town.',
+    help: `Minimum players: 4\n
+    Start with .game start mafia, let everyone join with .game join, then the host uses .game begin. The bot privately assigns one Mafia and Town roles to the others.\n
+    At night, Mafia privately messages the bot ".game kill NUMBER" using a living player’s full phone number. In the day, every living player can vote once with .game vote @player.\n
+    The vote resolves after all living players vote; a tie eliminates nobody. Roles are revealed when a player is eliminated.\n
+    Town wins by eliminating Mafia; Mafia wins when Mafia equals or outnumbers Town.`.replace(/\s+/g, ' '),
     createState() {
         return { phase: 'lobby', roles: {}, dead: [], votes: {}, round: 0 };
     },
