@@ -100,7 +100,7 @@ function parseQuestionsFromText(fileName, text) {
         });
     }
 
-    if (questions.length === 0 && /\b[A-D][\).\-:]\s*[/i.test(cleaned)) {
+    if (questions.length === 0 && /\b[A-D][\).\-:]\s*/i.test(cleaned)) {
         const lines = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean);
         let currentQuestion = null;
         let currentOptions = [];
