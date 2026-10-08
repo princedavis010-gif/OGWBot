@@ -166,7 +166,8 @@ async function handleGameMessage({ sock, m, sender, text, senderNumber, senderJi
             return;
         }
         session.players.push(createPlayer({ id: actorId, senderJid, senderNumber, name: m.pushName || 'Player', message: m }));
-        await sock.sendMessage(sender, { text: `${m.pushName || 'Player'} joined ${game.title}. Players: ${session.players.length}.` }, { quoted: m });
+        await sock.sendMessage(sender, { text: `
+        ${m.pushName || 'Player'} joined ${game.title}. Players: ${session.players.length}.` }, { quoted: m });
         return;
     }
 
