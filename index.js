@@ -35,6 +35,7 @@ const { isGroupAllowed, canUseCommand, formatCooldownMessage } = require('./util
 const handleMenu = require('./commands/menu');
 const { handleGameMessage } = require('./commands/games');
 const handleJambLesson = require('./commands/jamb');
+const { getSession: getJambSession } = require('./commands/jamb');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
 let isPrivate = false;
@@ -1715,6 +1716,19 @@ async function connectToWhatsApp() {
                         }
 
                         const userPrompt = prompt;
+                        const jambSession = getJambSession(sender);
+                        const isJambStudyMode = Boolean(jambSession && jambSession.phase === 'playing');
+
+                        if (isJambStudyMode) {
+                            prompt = [
+                                'You are in JAMB study mode now.',
+                                `Current subject: ${jambSession.title}.`,
+                                'Use a full exam-study teaching style: explain the concept, show the correct answer, why the other options are wrong, give a memory tip, and keep the explanation detailed but structured.',
+                                '',
+                                prompt || 'Please continue the lesson.'
+                            ].join('\n');
+                        }
+
                         if (quotedText) {
                             prompt = `The user is replying to this message:\n"${quotedText.slice(0, 5000)}"\n\nUser's message: ${prompt}`;
                         }
@@ -1754,6 +1768,7 @@ async function connectToWhatsApp() {
                             const aiConversationId = sender.endsWith('@g.us')
                                 ? `${sender}:${aiConversationIdentity}`
                                 : aiConversationIdentity;
+                            const aiOptions = isJambStudyMode ? { maxOutputTokens: 1800, temperature: 0.5 } : {};
                             const aiResult = await withAiTyping(sock, sender, () => getAiResponse(prompt, attachmentParts, async (requestedCommand) => {
                                 if (/\?\s*$/.test(userPrompt.trim())) {
                                     return { executed: false, reason: 'The user asked a question; answer it without running a command.' };

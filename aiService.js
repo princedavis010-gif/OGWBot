@@ -52,11 +52,12 @@ function getAiClient() {
 /**
  * Initializes and caches the persistent Gemini chat session for memory.
  */
-function getChatSession(conversationId = 'default') {
-    const existingSession = chatSessions.get(conversationId);
+function getChatSession(conversationId = 'default', options = {}) {
+    const sessionKey = `${conversationId}:${options.maxOutputTokens ?? 350}:${options.temperature ?? 0.9}`;
+    const existingSession = chatSessions.get(sessionKey);
     if (existingSession) {
-        chatSessions.delete(conversationId);
-        chatSessions.set(conversationId, existingSession);
+        chatSessions.delete(sessionKey);
+        chatSessions.set(sessionKey, existingSession);
         return existingSession;
     }
 
@@ -92,8 +93,8 @@ Generate fun, engaging questions (about football games like eFootball/DLS, recen
 Always provide 4 clear multiple-choice options labeled A, B, C, and D.
 When the user replies with their answer, check if they are correct.
     If they get it right, celebrate them heavily! If they fail, roast them and give them the correct answer immediately.`,
-            temperature: 0.9,
-            maxOutputTokens: 350,
+            temperature: options.temperature ?? 0.9,
+            maxOutputTokens: options.maxOutputTokens ?? 350,
             tools: [{ functionDeclarations: [executeBotCommandDeclaration] }],
             toolConfig: {
                 functionCallingConfig: { mode: 'AUTO' }
@@ -101,9 +102,10 @@ When the user replies with their answer, check if they are correct.
         }
     });
 
-    chatSessions.set(conversationId, chatSession);
+    chatSessions.set(sessionKey, chatSession);
     if (chatSessions.size > MAX_CHAT_SESSIONS) {
-        chatSessions.delete(chatSessions.keys().next().value);
+        const firstKey = chatSessions.keys().next().value;
+        if (firstKey) chatSessions.delete(firstKey);
     }
 
     return chatSession;
@@ -112,9 +114,9 @@ When the user replies with their answer, check if they are correct.
 /**
  * Generates a text response through Google Gemini Chat (with full conversation memory).
  */
-async function getAiResponse(prompt, attachmentParts = [], executeCommand, conversationId = 'default') {
+async function getAiResponse(prompt, attachmentParts = [], executeCommand, conversationId = 'default', options = {}) {
     try {
-        const chat = getChatSession(conversationId);
+        const chat = getChatSession(conversationId, options);
         const message = attachmentParts.length
             ? [...attachmentParts, { text: prompt }]
             : prompt;

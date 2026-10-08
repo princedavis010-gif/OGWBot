@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { getAiResponse } = require('../aiService');
 
 let pdfParse = null;
 try {
@@ -24,6 +25,15 @@ const fallbackLessons = {
 };
 
 const sessions = new Map();
+
+function shuffleQuestions(questions) {
+    const list = [...questions];
+    for (let index = list.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [list[index], list[swapIndex]] = [list[swapIndex], list[index]];
+    }
+    return list;
+}
 
 function ensureLessonFile() {
     const directory = path.dirname(lessonsFile);
@@ -206,10 +216,51 @@ function buildLessonList(lessons) {
         .join('\n');
 }
 
+function buildReviewText(session) {
+    if (!session || !session.review || !session.review.length) {
+        return '📚 No missed questions yet. Keep going and your review list will build here.';
+    }
+
+    return session.review
+        .map((item, index) => `${index + 1}. ${item.question}\n${item.options.map((option, optionIndex) => `${String.fromCharCode(65 + optionIndex)}. ${option}`).join('\n')}`)
+        .join('\n\n');
+}
+
+async function explainCurrentQuestion(sender, session) {
+    const current = session.questions[session.currentIndex];
+    if (!current) {
+        return '📚 There is no active question in this JAMB session yet.';
+    }
+
+    const prompt = [
+        `You are tutoring a JAMB student in ${session.title}.`,
+        'Use an exam-study teaching style: explain the concept, show why the correct option is right, why the others are wrong, and give a smart memory clue.',
+        'Make it feel like a teacher explaining a difficult point, not a quick answer dump.',
+        'Be detailed but structured and calm.',
+        '',
+        `Question: ${current.question}`,
+        `Options: ${current.options.map((option, index) => `${String.fromCharCode(65 + index)}. ${option}`).join(' | ')}`,
+        `The correct answer is ${String.fromCharCode(65 + current.answer)}.`,
+        'Give the lesson in a clear, student-friendly format with 3 sections: concept, correct answer, and why the others are wrong.'
+    ].join('\n');
+
+    const result = await getAiResponse(
+        prompt,
+        [],
+        async () => ({ executed: false, reason: 'No bot command is being run from a lesson explanation.' }),
+        `jamb:${sender}:${session.lessonName}`,
+        { maxOutputTokens: 1800, temperature: 0.5 }
+    );
+
+    return result.text || 'I could not explain the answer right now.';
+}
+
 function createSession(lessonName, lesson) {
-    const questions = (Array.isArray(lesson.questions) ? lesson.questions : [])
-        .map(normalizeQuestion)
-        .filter(Boolean);
+    const questions = shuffleQuestions(
+        (Array.isArray(lesson.questions) ? lesson.questions : [])
+            .map(normalizeQuestion)
+            .filter(Boolean)
+    );
 
     return {
         lessonName,
@@ -219,7 +270,11 @@ function createSession(lessonName, lesson) {
         score: 0,
         answered: 0,
         total: questions.length,
-        phase: 'playing'
+        phase: 'playing',
+        correct: 0,
+        wrong: 0,
+        attempts: 0,
+        review: []
     };
 }
 
@@ -258,14 +313,90 @@ async function handleJambLesson({ sock, m, sender, text }) {
                 '.jamb refresh',
                 '.jamb start [lessonName]',
                 '.jamb answer A',
+                '.jamb explain',
+                '.jamb review',
+                '.jamb skip',
+                '.jamb summary',
                 '.jamb status',
                 '.jamb stop',
                 '',
                 `Available lessons:\n${lessonList}`,
                 '',
-                'Example: .jamb start general'
+                'Example: .jamb start chemistry'
             ].join('\n')
         }, { quoted: m });
+        return true;
+    }
+
+    if (action === 'summary') {
+        if (!session) {
+            await sock.sendMessage(sender, { text: '📚 No JAMB session is active right now.' }, { quoted: m });
+            return true;
+        }
+
+        const accuracy = session.total > 0 ? Math.round((session.correct / session.total) * 100) : 0;
+        const summaryText = [
+            `📊 ${session.title} Summary`,
+            `Correct: ${session.correct}/${session.total}`,
+            `Wrong: ${session.wrong}`,
+            `Accuracy: ${accuracy}%`,
+            `Questions attempted: ${session.attempts}`
+        ].join('\n');
+
+        await sock.sendMessage(sender, { text: summaryText }, { quoted: m });
+        return true;
+    }
+
+    if (action === 'review') {
+        if (!session) {
+            await sock.sendMessage(sender, { text: '📚 No JAMB session is active right now.' }, { quoted: m });
+            return true;
+        }
+
+        await sock.sendMessage(sender, { text: buildReviewText(session) }, { quoted: m });
+        return true;
+    }
+
+    if (action === 'skip') {
+        if (!session) {
+            await sock.sendMessage(sender, { text: '📚 No JAMB session is active right now.' }, { quoted: m });
+            return true;
+        }
+
+        const current = session.questions[session.currentIndex];
+        if (!current) {
+            await sock.sendMessage(sender, { text: '📚 There is no question left to skip.' }, { quoted: m });
+            return true;
+        }
+
+        session.review.push({
+            question: current.question,
+            options: current.options,
+            correctAnswer: String.fromCharCode(65 + current.answer),
+            userAnswer: 'skipped'
+        });
+
+        const nextIndex = session.currentIndex + 1;
+        if (nextIndex >= session.questions.length) {
+            const accuracy = session.total > 0 ? Math.round((session.correct / session.total) * 100) : 0;
+            await sock.sendMessage(sender, { text: `⏭️ Question skipped.\n\n🏁 ${session.title} finished\nScore: ${session.correct}/${session.total}\nAccuracy: ${accuracy}%\n\nUse .jamb review to revisit missed or skipped questions.` }, { quoted: m });
+            sessions.delete(sender);
+            return true;
+        }
+
+        session.currentIndex = nextIndex;
+        await sock.sendMessage(sender, { text: `⏭️ Skipped. ${session.title} continues.\n\n${renderQuestion(session)}` }, { quoted: m });
+        return true;
+    }
+
+    if (action === 'explain') {
+        if (!session) {
+            await sock.sendMessage(sender, { text: '📚 Start a JAMB subject first with .jamb start chemistry or .jamb start use-of-english.' }, { quoted: m });
+            return true;
+        }
+
+        const explanation = await explainCurrentQuestion(sender, session);
+        await sock.sendMessage(sender, { text: explanation }, { quoted: m });
         return true;
     }
 
@@ -301,10 +432,10 @@ async function handleJambLesson({ sock, m, sender, text }) {
     }
 
     if (action === 'start') {
-        const lessonName = parts[2] || 'general';
+        const lessonName = parts.slice(2).join(' ') || 'general';
         const lesson = getLessonByName(lessonName, lessons);
         if (!lesson) {
-            await sock.sendMessage(sender, { text: `❌ Lesson not found. Use .jamb list to see available lessons.\nExample: .jamb start general` }, { quoted: m });
+            await sock.sendMessage(sender, { text: `❌ Lesson not found. Use .jamb list to see available lessons.\nExample: .jamb start chemistry` }, { quoted: m });
             return true;
         }
 
@@ -341,17 +472,38 @@ async function handleJambLesson({ sock, m, sender, text }) {
         const selectedIndex = letter.charCodeAt(0) - 65;
         const isCorrect = selectedIndex === current.answer;
         session.answered += 1;
-        if (isCorrect) session.score += 1;
+        session.attempts += 1;
+
+        if (isCorrect) {
+            session.score += 1;
+            session.correct += 1;
+        } else {
+            session.wrong += 1;
+        }
 
         const answerLine = isCorrect ? '✅ Correct!' : `❌ Wrong. Correct answer: ${String.fromCharCode(65 + current.answer)}.`;
         const nextIndex = session.currentIndex + 1;
 
+        if (!isCorrect) {
+            session.review.push({
+                question: current.question,
+                options: current.options,
+                correctAnswer: String.fromCharCode(65 + current.answer),
+                userAnswer: letter
+            });
+        }
+
         if (nextIndex >= session.questions.length) {
+            const accuracy = session.total > 0 ? Math.round((session.correct / session.total) * 100) : 0;
             const finalText = [
                 answerLine,
                 '',
-                `🏁 Lesson finished: ${session.title}`,
-                `Final score: ${session.score}/${session.total}`
+                `🏁 ${session.title} finished`,
+                `Score: ${session.correct}/${session.total}`,
+                `Accuracy: ${accuracy}%`,
+                `Wrong: ${session.wrong}`,
+                '',
+                'Use .jamb review to check the questions you missed.'
             ].join('\n');
             await sock.sendMessage(sender, { text: finalText }, { quoted: m });
             sessions.delete(sender);
@@ -363,7 +515,8 @@ async function handleJambLesson({ sock, m, sender, text }) {
             text: [
                 answerLine,
                 '',
-                `Score: ${session.score}/${session.total}`,
+                `Score: ${session.correct}/${session.total}`,
+                `Accuracy: ${Math.round((session.correct / session.total) * 100)}%`,
                 '',
                 renderQuestion(session)
             ].join('\n')
@@ -377,3 +530,4 @@ async function handleJambLesson({ sock, m, sender, text }) {
 
 module.exports = handleJambLesson;
 module.exports.sessions = sessions;
+module.exports.getSession = (sender) => sessions.get(sender);
