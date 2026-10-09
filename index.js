@@ -33,7 +33,6 @@ const { isBlacklisted, checkAndIncrementUsage, blockUser, unblockUser, setUserLi
 const { enableAntiLink, disableAntiLink, isAntiLinkEnabled } = require('./utils/antiLinkControl');
 const { isGroupAllowed, canUseCommand, formatCooldownMessage } = require('./utils/antiSpam');
 const handleMenu = require('./commands/menu');
-const { handleGameMessage } = require('./commands/games');
 const handleStatus = require('./commands/status');
 const botStartTime = Math.floor(Date.now() / 1000);
 let isPrivate = false;
@@ -65,6 +64,7 @@ const { getActivityAction, getActivityPhoneNumber, recordBotActivity } = require
 const { matchesOwnerNumber } = require('./utils/ownerAccess');
 const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
+const handleBurnerEmail = require('./commands/burner');
 const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
 const handleLoveTest = require('./commands/lovetest');
@@ -1003,7 +1003,7 @@ async function connectToWhatsApp() {
                             return;
                         }
 
-                        const staysPublicInAdminMode = ['game', 'taker', 'sticker', 'toimg', 'tovid'].includes(commandName);
+                        const staysPublicInAdminMode = ['taker', 'sticker', 'toimg', 'tovid'].includes(commandName);
                         if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber) && !staysPublicInAdminMode) {
                             let senderIsAdmin = false;
                             try {
@@ -1041,11 +1041,6 @@ async function connectToWhatsApp() {
                         });
                         return;
                         
-                    }
-
-                    if (/^\.game(?:\s|$)/i.test(text.trim())) {
-                        await handleGameMessage({ sock, m, sender, text, senderNumber, senderJid, contextInfo });
-                        return;
                     }
 
                     // Print to terminal if logs are enabled
@@ -1508,6 +1503,11 @@ async function connectToWhatsApp() {
 
                     if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
                         await handleMenu({ sock, m, sender, sleep });
+                        return;
+                    }
+
+                    if (text.toLowerCase().startsWith('.burner') || text.toLowerCase().startsWith('.tempmail') || text.toLowerCase().startsWith('.mail')) {
+                        await handleBurnerEmail({ sock, m, sender, senderJid, text, sleep });
                         return;
                     }
 
