@@ -4,7 +4,7 @@ const path = require('path');
 const commandNames = new Set([
     'add', 'admin', 'alive', 'antilink', 'antiviewonce', 'block', 'chat', 'death', 'delete', 'demote',
     'dare', 'everyone', 'flirt', 'flirty', 'group', 'h', 'imagine', 'kick',
-    'insult', 'life', 'limit', 'list', 'lock', 'lovetest', 'marriage', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
+    'insult', 'life', 'limit', 'list', 'lock', 'lovetest', 'marriage', 'mp3', 'music', 'mylove', 'mute', 'off', 'on', 'pickuplines',
     'poll', 'promote', 'public', 'private', 'quote', 'rbg', 'removelimit',
     'removebg', 'restart', 's', 'scr', 'st', 'status', 'tagall', 'toimage', 'toimg', 'tovid',
     'tts', 'unblock', 'unlimit', 'unlock', 'unmute', 'vibe', 'welcome',
@@ -31,6 +31,7 @@ const commandAliases = {
     ship: 'lovetest',
     compatibility: 'lovetest',
     shipname: 'lovetest',
+    mp3: 'song',
     marige: 'lovetest',
     marriage: 'lovetest'
 };

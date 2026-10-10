@@ -34,7 +34,6 @@ async function handleMenu({ sock, m, sender, sleep }) {
 │ ➜ .tovid
 │ ➜ .rbg
 │ ➜ .vibe
-│ ➜ .burner
 
 
 ┏━━━━━━━━━━━━━━━━━

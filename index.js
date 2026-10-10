@@ -64,7 +64,6 @@ const { getActivityAction, getActivityPhoneNumber, recordBotActivity } = require
 const { matchesOwnerNumber } = require('./utils/ownerAccess');
 const registerActivityDashboard = require('./routes/activityDashboard');
 const handleAlive = require('./commands/alive');
-const handleBurnerEmail = require('./commands/burner');
 const handleImagine = require('./commands/imagine');
 const handleFlog = require('./commands/flog');
 const handleLoveTest = require('./commands/lovetest');
@@ -1446,7 +1445,7 @@ async function connectToWhatsApp() {
                     }
 
                     // 🎵 Song Downloader Command (.song, .music, .mp3)
-                    if (text.toLowerCase().startsWith('.song') || text.toLowerCase().startsWith('.music') || text.toLowerCase().startsWith('.vibe')) {
+                    if (commandName === 'song') {
                         await handleSong({ sock, m, sender, text, sleep });
                         return;
                     }
@@ -1503,11 +1502,6 @@ async function connectToWhatsApp() {
 
                     if (text.toLowerCase() === '.list' || text.toLowerCase() === '.help' || text.toLowerCase() === '.h' || text.toLowerCase() === '.chat') {
                         await handleMenu({ sock, m, sender, sleep });
-                        return;
-                    }
-
-                    if (text.toLowerCase().startsWith('.burner') || text.toLowerCase().startsWith('.tempmail') || text.toLowerCase().startsWith('.mail')) {
-                        await handleBurnerEmail({ sock, m, sender, senderJid, text, sleep });
                         return;
                     }
 
