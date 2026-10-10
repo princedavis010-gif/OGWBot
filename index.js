@@ -55,6 +55,7 @@ const handleRemoveBg = require('./commands/handleRemoveBg');
 const handlePollCommand = require('./commands/poll');
 const handleSong = require('./commands/song');
 const { handleQuoteToggle, isQuoteAiEnabled } = require('./commands/quoteToggle');
+const { handleSavage, isSavageModeEnabled } = require('./commands/savage');
 const { isUserMuted } = require('./utils/mutedStorage');
 const { handleMute, handleUnmute } = require('./commands/mute');
 const { handleFlirt } = require('./commands/flirt');
@@ -1419,6 +1420,11 @@ async function connectToWhatsApp() {
                     }
 
                     const cleanText = text.toLowerCase().trim();
+                    if (/^\.savage(?:\s|$)/i.test(text.trim())) {
+                        await handleSavage({ sock, m, sender, text, senderNumber, OWNER_NUMBER, botPhoneNumber });
+                        return;
+                    }
+
                     if (cleanText === '.flirt' || cleanText.startsWith('.flirt ') ||
                         cleanText === '.flirty' || cleanText.startsWith('.flirty ') ||
                         cleanText === '.pickuplines' || cleanText.startsWith('.pickuplines ')) {
@@ -1629,7 +1635,7 @@ async function connectToWhatsApp() {
                     isQuotingBot = Boolean(repliedBotMessageKind);
                     if (repliedBotMessageKind === 'command') return;
 
-                    const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('og');
+                    const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase() === 'og';
 
                     if (isAiTriggered) {
                         if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
@@ -1788,7 +1794,7 @@ async function connectToWhatsApp() {
                                 });
 
                                 return { executed: true };
-                            }, aiConversationId));
+                            }, aiConversationId, { savageMode: isSavageModeEnabled() }));
                             if (aiResult.commandExecuted) return;
                             const replyText = aiResult.text;
 
