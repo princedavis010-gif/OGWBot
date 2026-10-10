@@ -4,13 +4,13 @@ let savageModeEnabled = false;
 
 async function handleSavage({ sock, m, sender, text, senderNumber, OWNER_NUMBER, botPhoneNumber }) {
     if (!matchesOwnerNumber(senderNumber, OWNER_NUMBER, botPhoneNumber)) {
-        await sock.sendMessage(sender, { text: 'Only the owner or bot number can use .savage.' }, { quoted: m });
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
         return;
     }
 
     const match = text.trim().match(/^\.savage\s+(on|off)$/i);
     if (!match) {
-        await sock.sendMessage(sender, { text: 'Usage: .savage on or .savage off' }, { quoted: m });
+        await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
         return;
     }
 

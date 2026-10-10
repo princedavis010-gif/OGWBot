@@ -1141,7 +1141,7 @@ async function connectToWhatsApp() {
                             return;
                         }
                         if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
-                            await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
+                            await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
                         await handleUnlimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
@@ -1164,7 +1164,7 @@ async function connectToWhatsApp() {
 
                     if (text.toLowerCase().startsWith('.scr')) {
                         if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
-                            await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .scr.' }, { quoted: m });
+                            await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
                         if (sender.endsWith('@g.us') && !isGroupAllowed(sender)) {
@@ -1223,11 +1223,11 @@ async function connectToWhatsApp() {
 
                     if (text.toLowerCase().startsWith('.limit')) {
                         if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
-                            await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .limit.' }, { quoted: m });
+                            await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
                         if (await hasProtectedTarget({ sock, groupJid: sender, contextInfo, text })) {
-                            await sock.sendMessage(sender, { text: '❌ You cannot change the usage limit for the owner or bot number.' }, { quoted: m });
+                            await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
                         await handleLimit({ sock, m, text, sender, senderNumber, OWNER_NUMBER, botPhoneNumber, sleep, getContextInfo });
@@ -1541,7 +1541,7 @@ async function connectToWhatsApp() {
                     // 🚀 PLACE YOUR COMMAND TRIGGERS RIGHT AFTER
                     if (text.toLowerCase() === '.vv' || text.toLowerCase() === '.antiviewonce') {
                         if (!isOwnerSenderNumber(senderNumber) && !isOwnerOrBotNumber(senderNumber)) {
-                            await sock.sendMessage(sender, { text: '❌ Only the owner or bot number can use .vv.' }, { quoted: m });
+                            await sock.sendMessage(sender, { text: '❌ 𝚁𝙴𝚂𝚃𝚁𝙸𝙲𝚃𝙴𝙳.\n\n— 𝙾𝙽𝙻𝚈 𝚃𝙷𝙴 𝙾𝚆𝙽𝙴𝚁 𝙲𝙰𝙽 𝚄𝚂𝙴 𝚃𝙷𝙸𝚂 𝙲𝙾𝙼𝙼𝙰𝙽𝙳.' }, { quoted: m });
                             return;
                         }
                         await handleVV({ sock, m, sender, sleep, getContextInfo, OWNER_NUMBER });
