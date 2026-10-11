@@ -1635,7 +1635,7 @@ async function connectToWhatsApp() {
                     isQuotingBot = Boolean(repliedBotMessageKind);
                     if (repliedBotMessageKind === 'command') return;
 
-                    const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase() === 'og';
+                    const isAiTriggered = isMentioned || (isQuoteAiEnabled() && isQuotingBot) || text.toLowerCase().startsWith('og');
 
                     if (isAiTriggered) {
                         if (getCommandAccessMode() === 'admin' && !isOwnerSenderNumber(senderNumber)) {
@@ -1656,7 +1656,7 @@ async function connectToWhatsApp() {
 
                         let prompt = text;
 
-                        if (text.toLowerCase() === 'og') {
+                        if (text.toLowerCase().startsWith('og')) {
                             prompt = text.slice(6).trim();
                             if (prompt.startsWith(',')) {
                                 prompt = prompt.slice(1).trim();
